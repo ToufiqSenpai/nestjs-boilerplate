@@ -1,0 +1,5 @@
+allowBuilds:
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  better-sqlite3: true
+  esbuild: true
