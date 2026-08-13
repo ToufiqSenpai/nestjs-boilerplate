@@ -6,7 +6,7 @@ import { CreateEmailOptions, Resend } from "resend"
 import { createElement, type ComponentProps, type FunctionComponent } from "react"
 import { randomUUID } from "node:crypto"
 import { EMAIL_TEMPLATES, type EmailTemplateName } from "./templates/index.js"
-import { getTranslator, type Locale } from "./i18n/index.js"
+import { getTranslator, type Locale } from "../i18n/index.js"
 
 interface SendEmailParams<T extends EmailTemplateName> {
   to: string
@@ -42,7 +42,7 @@ export class EmailService {
     emailType = template,
     userId
   }: SendEmailParams<T>): Promise<void> {
-    const { translator: t } = getTranslator(locale, template)
+    const { translator: t } = getTranslator(locale, `email.${template}`)
     const Component = EMAIL_TEMPLATES[template] as unknown as FunctionComponent<Record<string, unknown>>
 
     const payload: CreateEmailOptions = {

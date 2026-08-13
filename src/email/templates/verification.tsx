@@ -16,7 +16,7 @@ import { tailwindConfig } from "../tailwind.config.js";
 import {
   getTranslator,
   type Locale,
-} from "../i18n/index.js";
+} from "../../i18n/index.js";
 
 interface VerificationEmailProps {
   name: string;

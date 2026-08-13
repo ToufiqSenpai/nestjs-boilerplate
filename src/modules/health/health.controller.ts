@@ -19,6 +19,7 @@ export class HealthController implements OnApplicationShutdown {
   ) {}
 
   public async onApplicationShutdown(_signal: string): Promise<void> {
+    void _signal
     this.shuttingDown = true
   }
 

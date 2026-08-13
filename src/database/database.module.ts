@@ -5,6 +5,8 @@ import { User } from "../modules/auth/entities/user.entity.js"
 import { Session } from "../modules/auth/entities/session.entity.js"
 import { Account } from "../modules/auth/entities/account.entity.js"
 import { Verification } from "../modules/auth/entities/verification.entity.js"
+import { Article } from "../modules/articles/entities/article.entity.js"
+import { ArticleTranslation } from "../modules/articles/entities/article-translation.entity.js"
 import { PGlitePool } from "./pglite-pool.js"
 import { TransactionContextService } from "./unit-of-work/transaction-context.service.js"
 import { UnitOfWork } from "./unit-of-work/unit-of-work.js"
@@ -17,7 +19,7 @@ import { PostgresDataSourceOptions } from "typeorm/driver/postgres/PostgresDataS
         let options: TypeOrmModuleOptions = {
           type: "postgres",
           synchronize: process.env.NODE_ENV !== "production",
-          entities: [User, Session, Account, Verification],
+          entities: [User, Session, Account, Verification, Article, ArticleTranslation],
           migrations: [
             process.env.NODE_ENV === "production"
               ? "dist/database/migrations/*.js"

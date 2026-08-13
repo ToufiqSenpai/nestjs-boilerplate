@@ -14,14 +14,14 @@ const LOCALE_REGISTRY: LocaleRegistry[] = [
   { locale: "en", message: en, textDirection: "ltr" }
 ] as const
 
-const DEFAULT_LOCALE = LOCALE_REGISTRY[0]
+export const DEFAULT_LOCALE = LOCALE_REGISTRY[0]
 
 export type Locale = (typeof LOCALE_REGISTRY)[number]["locale"]
 
-type EmailTranslator = (key: string, values?: Record<string, string | number | Date>) => string
+type Translator = (key: string, values?: Record<string, string | number | Date>) => string
 
 interface GetTranslatorReturn {
-  translator: EmailTranslator
+  translator: Translator
   direction: TextDirection
 }
 
@@ -37,7 +37,7 @@ export function getTranslator(locale: Locale, namespace: string): GetTranslatorR
       onError(error) {
         logger.error(error.message, error.stack, error)
       }
-    }) as unknown as EmailTranslator,
+    }) as unknown as Translator,
     direction: resolveLocale.textDirection
   }
 }
