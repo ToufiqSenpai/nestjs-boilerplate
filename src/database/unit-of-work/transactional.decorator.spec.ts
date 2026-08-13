@@ -1,106 +1,94 @@
-import "reflect-metadata";
-import { UnitOfWork } from "./unit-of-work.js";
-import { Transactional, TRANSACTIONAL_METADATA_KEY } from "./transactional.decorator.js";
-import { vi } from "vitest";
+import "reflect-metadata"
+import { UnitOfWork } from "./unit-of-work.js"
+import { Transactional, TRANSACTIONAL_METADATA_KEY } from "./transactional.decorator.js"
+import { vi } from "vitest"
 
 class Target {}
 
 describe("Transactional decorator", () => {
   afterEach(() => {
-    UnitOfWork.instance = null;
-  });
+    UnitOfWork.instance = null
+  })
 
   it("should throw when applied to a class property", () => {
     const descriptor = {
-      value: undefined,
-    } as unknown as PropertyDescriptor;
+      value: undefined
+    } as unknown as PropertyDescriptor
 
-    expect(() =>
-      Transactional()(Target.prototype, "field", descriptor),
-    ).toThrow(/class property/);
-  });
+    expect(() => Transactional()(Target.prototype, "field", descriptor)).toThrow(/class property/)
+  })
 
   it("should set transaction metadata on the method", () => {
     const descriptor = {
-      value: () => "ok",
-    } as unknown as PropertyDescriptor;
+      value: () => "ok"
+    } as unknown as PropertyDescriptor
 
     const returned = Transactional({
       propagation: "REQUIRES_NEW",
-      isolationLevel: "SERIALIZABLE",
-    })(Target.prototype, "method", descriptor);
+      isolationLevel: "SERIALIZABLE"
+    })(Target.prototype, "method", descriptor)
 
-    const metadata = Reflect.getMetadata(
-      TRANSACTIONAL_METADATA_KEY,
-      returned.value,
-    );
+    const metadata = Reflect.getMetadata(TRANSACTIONAL_METADATA_KEY, returned.value)
 
     expect(metadata).toEqual({
       propagation: "REQUIRES_NEW",
-      isolationLevel: "SERIALIZABLE",
-    });
-    expect(typeof returned.value).toBe("function");
-  });
+      isolationLevel: "SERIALIZABLE"
+    })
+    expect(typeof returned.value).toBe("function")
+  })
 
   it("should run the method inside a transaction when UnitOfWork.instance is set", async () => {
     const descriptor = {
       value: function (this: { calls: number }) {
-        this.calls += 1;
-        return this.calls;
-      },
-    } as unknown as PropertyDescriptor;
+        this.calls += 1
+        return this.calls
+      }
+    } as unknown as PropertyDescriptor
 
-    const transactionSpy = vi.fn(
-      (callback: () => unknown) => callback(),
-    );
+    const transactionSpy = vi.fn((callback: () => unknown) => callback())
     UnitOfWork.instance = {
-      transaction: transactionSpy,
-    } as unknown as UnitOfWork;
+      transaction: transactionSpy
+    } as unknown as UnitOfWork
 
-    Transactional()(Target.prototype, "method", descriptor);
+    Transactional()(Target.prototype, "method", descriptor)
 
-    const receiver = { calls: 0 };
-    const result = await (descriptor.value as unknown as (...args: unknown[]) => unknown).call(receiver);
+    const receiver = { calls: 0 }
+    const result = await (descriptor.value as unknown as (...args: unknown[]) => unknown).call(receiver)
 
-    expect(result).toBe(1);
-    expect(transactionSpy).toHaveBeenCalledTimes(1);
-  });
+    expect(result).toBe(1)
+    expect(transactionSpy).toHaveBeenCalledTimes(1)
+  })
 
   it("should throw when UnitOfWork.instance is not set", async () => {
     const descriptor = {
-      value: () => "ok",
-    } as unknown as PropertyDescriptor;
+      value: () => "ok"
+    } as unknown as PropertyDescriptor
 
-    Transactional()(Target.prototype, "method", descriptor);
+    Transactional()(Target.prototype, "method", descriptor)
 
-    await expect(
-      (descriptor.value as unknown as (...args: unknown[]) => unknown)(),
-    ).rejects.toThrow(/UnitOfWork.instance is not set/);
-  });
+    await expect((descriptor.value as unknown as (...args: unknown[]) => unknown)()).rejects.toThrow(
+      /UnitOfWork.instance is not set/
+    )
+  })
 
   it("should forward options to the unit of work transaction", async () => {
     const descriptor = {
-      value: () => "ok",
-    } as unknown as PropertyDescriptor;
+      value: () => "ok"
+    } as unknown as PropertyDescriptor
 
-    const transactionSpy = vi.fn(
-      (callback: () => unknown) => callback(),
-    );
+    const transactionSpy = vi.fn((callback: () => unknown) => callback())
     UnitOfWork.instance = {
-      transaction: transactionSpy,
-    } as unknown as UnitOfWork;
+      transaction: transactionSpy
+    } as unknown as UnitOfWork
 
     const options = {
       propagation: "MANDATORY" as const,
-      isolationLevel: "SERIALIZABLE" as const,
-    };
-    Transactional(options)(Target.prototype, "method", descriptor);
+      isolationLevel: "SERIALIZABLE" as const
+    }
+    Transactional(options)(Target.prototype, "method", descriptor)
 
-    await (descriptor.value as unknown as (...args: unknown[]) => unknown)();
+    await (descriptor.value as unknown as (...args: unknown[]) => unknown)()
 
-    expect(transactionSpy).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining(options),
-    );
-  });
-});
+    expect(transactionSpy).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining(options))
+  })
+})

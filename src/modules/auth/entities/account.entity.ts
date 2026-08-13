@@ -1,35 +1,41 @@
-import { Column, Entity } from "typeorm";
-import { BaseEntity } from "../../../database/entity.js";
+import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm"
+import { BaseEntity } from "../../../database/base.entity.js"
+import { User } from "./user.entity.js"
 
 @Entity({ name: "account" })
+@Index("IDX_account_userId", ["userId"])
 export class Account extends BaseEntity {
   @Column({ type: "text" })
-  public userId: string;
+  public userId: string
+
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "userId" })
+  public user: Promise<User>
 
   @Column({ type: "text" })
-  public accountId: string;
+  public accountId: string
 
   @Column({ type: "text" })
-  public providerId: string;
+  public providerId: string
 
   @Column({ type: "text", nullable: true })
-  public accessToken: string | null;
+  public accessToken: string | null
 
   @Column({ type: "text", nullable: true })
-  public refreshToken: string | null;
+  public refreshToken: string | null
 
-  @Column({ type: "datetime", nullable: true })
-  public accessTokenExpiresAt: Date | null;
+  @Column({ type: "timestamp", nullable: true })
+  public accessTokenExpiresAt: Date | null
 
-  @Column({ type: "datetime", nullable: true })
-  public refreshTokenExpiresAt: Date | null;
-
-  @Column({ type: "text", nullable: true })
-  public scope: string | null;
+  @Column({ type: "timestamp", nullable: true })
+  public refreshTokenExpiresAt: Date | null
 
   @Column({ type: "text", nullable: true })
-  public idToken: string | null;
+  public scope: string | null
 
   @Column({ type: "text", nullable: true })
-  public password: string | null;
+  public idToken: string | null
+
+  @Column({ type: "text", nullable: true })
+  public password: string | null
 }

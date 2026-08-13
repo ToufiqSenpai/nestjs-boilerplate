@@ -1,30 +1,34 @@
-import { Injectable } from "@nestjs/common";
-import { DataSource, EntityManager } from "typeorm";
-import type { IsolationLevel } from "typeorm/driver/types/IsolationLevel.js";
-import { TransactionContextService } from "./transaction-context.service.js";
+import { Injectable } from "@nestjs/common"
+import { DataSource, EntityManager } from "typeorm"
+import type { IsolationLevel } from "typeorm/driver/types/IsolationLevel.js"
+import { TransactionContextService } from "./transaction-context.service.js"
 
-export type Propagation = "REQUIRED" | "REQUIRES_NEW" | "MANDATORY";
+export enum Propagation {
+  REQUIRED,
+  REQUIRES_NEW,
+  MANDATORY
+}
 
 export interface TransactionOptions {
   /** Whether the callback may run inside an existing transaction. */
-  propagation?: Propagation;
+  propagation?: Propagation
   /** Isolation level of the transaction when a new one is started. */
-  isolationLevel?: IsolationLevel;
+  isolationLevel?: IsolationLevel
   /** Runs after a successful commit. */
-  onCommit?: () => Promise<void> | void;
+  onCommit?: () => Promise<void> | void
   /** Runs after a rollback. */
-  onRollback?: (error: unknown) => Promise<void> | void;
+  onRollback?: (error: unknown) => Promise<void> | void
 }
 
 @Injectable()
 export class UnitOfWork {
-  public static instance: UnitOfWork | null = null;
+  public static instance: UnitOfWork | null = null
 
   public constructor(
     private readonly dataSource: DataSource,
-    private readonly transactionContext: TransactionContextService<EntityManager>,
+    private readonly transactionContext: TransactionContextService<EntityManager>
   ) {
-    UnitOfWork.instance = this;
+    UnitOfWork.instance = this
   }
 
   /**
@@ -35,44 +39,36 @@ export class UnitOfWork {
    * - `REQUIRES_NEW`: always start a new (independent) transaction.
    * - `MANDATORY`: must run inside an existing transaction, otherwise throw.
    */
-  public async transaction<T>(
-    callback: () => Promise<T>,
-    options: TransactionOptions = {},
-  ): Promise<T> {
-    const { propagation = "REQUIRED" } = options;
-    const activeManager = this.transactionContext.getContext();
+  public async transaction<T>(callback: () => Promise<T>, options: TransactionOptions = {}): Promise<T> {
+    const { propagation = "REQUIRED" } = options
+    const activeManager = this.transactionContext.getContext()
 
-    if (propagation === "REQUIRED" && activeManager) {
-      return callback();
+    if (propagation === Propagation.REQUIRED && activeManager) {
+      return callback()
     }
-    if (propagation === "MANDATORY" && !activeManager) {
-      throw new Error(
-        "@Transactional: propagation=MANDATORY requires an existing transaction, but none is active.",
-      );
+    if (propagation === Propagation.MANDATORY && !activeManager) {
+      throw new Error("@Transactional: propagation=MANDATORY requires an existing transaction, but none is active.")
     }
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    let transactionStarted = false;
+    const queryRunner = this.dataSource.createQueryRunner()
+    let transactionStarted = false
     try {
-      await queryRunner.connect();
-      await queryRunner.startTransaction(options.isolationLevel);
-      transactionStarted = true;
+      await queryRunner.connect()
+      await queryRunner.startTransaction(options.isolationLevel)
+      transactionStarted = true
 
-      const result = await this.transactionContext.run(
-        queryRunner.manager,
-        callback,
-      );
-      await queryRunner.commitTransaction();
-      await options.onCommit?.();
-      return result;
+      const result = await this.transactionContext.run(queryRunner.manager, callback)
+      await queryRunner.commitTransaction()
+      await options.onCommit?.()
+      return result
     } catch (error) {
       if (transactionStarted) {
-        await queryRunner.rollbackTransaction();
+        await queryRunner.rollbackTransaction()
       }
-      await options.onRollback?.(error);
-      throw error;
+      await options.onRollback?.(error)
+      throw error
     } finally {
-      await queryRunner.release();
+      await queryRunner.release()
     }
   }
 }

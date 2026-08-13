@@ -13,52 +13,60 @@ import {
   Text,
 } from "react-email";
 import { tailwindConfig } from "../tailwind.config.js";
+import {
+  getTranslator,
+  type Locale,
+} from "../i18n/index.js";
 
 interface VerificationEmailProps {
   name: string;
   verificationUrl: string;
-  expiresInMinutes?: number;
+  expiresInMinutes: number;
+  locale: Locale;
 }
 
-export default function VerificationEmail({
+export default function Verification({
   name,
   verificationUrl,
-  expiresInMinutes = 30,
+  expiresInMinutes,
+  locale,
 }: VerificationEmailProps) {
+  const { translator: t, direction } = getTranslator(locale, "verification");
+
   return (
-    <Html lang="en" dir="ltr">
+    <Html lang={locale} dir={direction}>
       <Tailwind config={tailwindConfig}>
         <Head />
         <Body className="bg-background font-sans">
-          <Preview>Verify your email address for Acme</Preview>
-          <Container lang="en" dir="ltr" className="mx-auto py-10 px-5 max-w-xl">
+          <Preview>{t("preview")}</Preview>
+          <Container className="mx-auto py-10 px-5 max-w-xl">
             <Section className="bg-surface rounded p-6">
               <Heading as="h1" className="text-2xl font-bold text-gray-800">
-                Verify your email address
+                {t("title")}
               </Heading>
               <Text className="text-base leading-7 text-gray-800">
-                Hi {name}, thanks for signing up. Confirm this email address to
-                activate your Acme account.
+                {t("intro", { name })}
               </Text>
               <Button
                 href={verificationUrl}
                 className="bg-brand-primary text-white px-7 py-3.5 rounded block text-center font-bold my-6 no-underline box-border"
               >
-                Verify Email
+                {t("cta")}
               </Button>
               <Text className="text-sm text-gray-500 leading-5">
-                This link expires in {expiresInMinutes} minutes.
+                {t("expires", { expires: expiresInMinutes })}
               </Text>
               <Hr className="border-solid border-gray-200 my-6" />
               <Text className="text-sm text-gray-500 leading-5">
-                If you didn't create an account with Acme, you can safely ignore
-                this email.
+                {t("ignore")}
               </Text>
               <Text className="text-sm text-gray-500 leading-5">
-                If the button does not work, copy and paste this link into your
-                browser:
+                {t("fallbackLabel")}
               </Text>
-              <Link href={verificationUrl} className="text-sm text-brand-secondary break-all">
+              <Link
+                href={verificationUrl}
+                className="text-sm text-brand-secondary break-all"
+              >
                 {verificationUrl}
               </Link>
             </Section>
@@ -69,10 +77,9 @@ export default function VerificationEmail({
   );
 }
 
-VerificationEmail.PreviewProps = {
+Verification.PreviewProps = {
   name: "John Doe",
   verificationUrl: "https://example.com/verify/abc123",
   expiresInMinutes: 30,
+  locale: "en",
 } satisfies VerificationEmailProps;
-
-export { VerificationEmail };

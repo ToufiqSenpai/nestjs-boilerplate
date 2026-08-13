@@ -1,5 +1,7 @@
 import { InfisicalSDK } from "@infisical/sdk"
 
+process.loadEnvFile(".env")
+
 const clientId = process.env.INFISICAL_CLIENT_ID
 const clientSecret = process.env.INFISICAL_CLIENT_SECRET
 const projectId = process.env.INFISICAL_PROJECT_ID

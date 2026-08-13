@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common"
 import { ConfigModule as NestConfigModule } from "@nestjs/config"
-import { existsSync, readFileSync } from "fs"
+import { access, readFile } from "fs/promises"
 import { resolve } from "path"
 import _ from "lodash"
 import { secrets } from "./infisical.js"
@@ -10,18 +10,20 @@ import { secrets } from "./infisical.js"
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [".env"],
       load: [
         async (): Promise<any> => {
           const env = process.env.NODE_ENV || "development"
           const configDir = import.meta.dirname
           const defaultConfigPath = resolve(configDir, "config.json")
           const envConfigPath = resolve(configDir, `config.${env}.json`)
-          let config = JSON.parse(readFileSync(defaultConfigPath, "utf-8"))
+          let config = JSON.parse(await readFile(defaultConfigPath, "utf-8"))
 
-          if (existsSync(envConfigPath)) {
-            const envConfig = JSON.parse(readFileSync(envConfigPath, "utf-8"))
+          try {
+            await access(envConfigPath)
+            const envConfig = JSON.parse(await readFile(envConfigPath, "utf-8"))
             config = _.merge(config, envConfig)
+          } catch (err: any) {
+            if (err?.code !== "ENOENT") throw err
           }
 
           config = _.merge(config, secrets)
@@ -37,6 +39,6 @@ export class ConfigModule {}
 // eslint-disable-next-line
 declare namespace NodeJS {
   interface ProcessEnv {
-    NODE_ENV: "development" | "production" | "test";
+    NODE_ENV: "development" | "production" | "test"
   }
 }

@@ -1,11 +1,5 @@
-import {
-  DataSource,
-  EntityManager,
-  EntityTarget,
-  ObjectLiteral,
-  Repository,
-} from "typeorm";
-import { TransactionContextService } from "./unit-of-work/transaction-context.service.js";
+import { DataSource, EntityManager, EntityTarget, ObjectLiteral, Repository } from "typeorm"
+import { TransactionContextService } from "./unit-of-work/transaction-context.service.js"
 
 /**
  * Wraps a standard TypeORM `Repository` in a Proxy so that its `manager`
@@ -22,16 +16,16 @@ import { TransactionContextService } from "./unit-of-work/transaction-context.se
 export function createTransactionalRepository<T extends ObjectLiteral>(
   dataSource: DataSource,
   entity: EntityTarget<T>,
-  context: TransactionContextService<EntityManager>,
+  context: TransactionContextService<EntityManager>
 ): Repository<T> {
-  const baseRepository = dataSource.getRepository(entity);
+  const baseRepository = dataSource.getRepository(entity)
 
   return new Proxy(baseRepository, {
     get(target, property, receiver) {
       if (property === "manager") {
-        return context.getContext() ?? target.manager;
+        return context.getContext() ?? target.manager
       }
-      return Reflect.get(target, property, receiver);
-    },
-  });
+      return Reflect.get(target, property, receiver)
+    }
+  })
 }

@@ -63,6 +63,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Agents
 .agents
 .commandcode
+.opencode
 
-# generated config files (contain secrets)
-/configs
+# etc
+openapi.json

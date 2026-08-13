@@ -4,6 +4,7 @@
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "declaration": true,
     "removeComments": true,
@@ -11,13 +12,14 @@
     "experimentalDecorators": true,
     "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
+    "target": "ES2025",
     "sourceMap": true,
-    "outDir": "./dist",
     "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo",
     "skipLibCheck": true,
     "strict": false,
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"]
-  }
+  },
+  "exclude": ["node_modules", "dist", "vitest.config.*", "eslint.config.*"]
 }

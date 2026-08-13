@@ -1,16 +1,8 @@
-import { SetMetadata } from "@nestjs/common";
-import type { IsolationLevel } from "typeorm/driver/types/IsolationLevel.js";
-import { UnitOfWork } from "./unit-of-work.js";
-import type { Propagation, TransactionOptions } from "./unit-of-work.js";
+import { SetMetadata } from "@nestjs/common"
+import { UnitOfWork } from "./unit-of-work.js"
+import type { TransactionOptions } from "./unit-of-work.js"
 
-export const TRANSACTIONAL_METADATA_KEY = "transactional";
-
-export interface TransactionalOptions {
-  propagation?: Propagation;
-  isolationLevel?: IsolationLevel;
-  onCommit?: TransactionOptions["onCommit"];
-  onRollback?: TransactionOptions["onRollback"];
-}
+export const TRANSACTIONAL_METADATA_KEY = "transactional"
 
 /**
  * Decorator that marks a method to be executed within a database transaction.
@@ -31,48 +23,41 @@ export interface TransactionalOptions {
  * async logAudit() { ... }
  * ```
  */
-export function Transactional(options: TransactionalOptions = {}): MethodDecorator {
-  return (
-    target: object,
-    propertyKey: string | symbol,
-    descriptor: PropertyDescriptor,
-  ) => {
-    const originalMethod = descriptor.value as (...args: any[]) => unknown;
+export function Transactional(options: TransactionOptions = {}): MethodDecorator {
+  return (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+    const originalMethod = descriptor.value as (...args: any[]) => unknown
 
     if (typeof originalMethod !== "function") {
       throw new TypeError(
         `@Transactional must be applied to a class method, but "${String(
-          propertyKey,
-        )}" is a class property. Use a regular method instead of an arrow-function field.`,
-      );
+          propertyKey
+        )}" is a class property. Use a regular method instead of an arrow-function field.`
+      )
     }
 
-    const wrappedMethod = async function (
-      this: unknown,
-      ...args: any[]
-    ): Promise<unknown> {
-      const unitOfWork = UnitOfWork.instance;
+    const wrappedMethod = async function (this: unknown, ...args: any[]): Promise<unknown> {
+      const unitOfWork = UnitOfWork.instance
       if (!unitOfWork) {
         throw new Error(
-          "@Transactional: UnitOfWork.instance is not set. Make sure UnitOfWork is registered and the application has started.",
-        );
+          "@Transactional: UnitOfWork.instance is not set. Make sure UnitOfWork is registered and the application has started."
+        )
       }
 
       return unitOfWork.transaction(() => originalMethod.apply(this, args), {
         propagation: options.propagation,
         isolationLevel: options.isolationLevel,
         onCommit: options.onCommit,
-        onRollback: options.onRollback,
-      });
-    };
+        onRollback: options.onRollback
+      })
+    }
 
-    descriptor.value = wrappedMethod;
+    descriptor.value = wrappedMethod
 
     SetMetadata(TRANSACTIONAL_METADATA_KEY, {
       propagation: options.propagation,
-      isolationLevel: options.isolationLevel,
-    })(target, propertyKey, descriptor);
+      isolationLevel: options.isolationLevel
+    })(target, propertyKey, descriptor)
 
-    return descriptor;
-  };
+    return descriptor
+  }
 }
