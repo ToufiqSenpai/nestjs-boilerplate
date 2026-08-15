@@ -2,10 +2,10 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm"
 import { BaseEntity } from "../../../database/base.entity.js"
 import { User } from "./user.entity.js"
 
-@Entity({ name: "session" })
+@Entity()
 @Index("IDX_session_userId", ["userId"])
 export class Session extends BaseEntity {
-  @Column({ type: "text" })
+  @Column({ type: "uuid" })
   public userId: string
 
   @ManyToOne(() => User, { onDelete: "CASCADE" })
@@ -15,7 +15,7 @@ export class Session extends BaseEntity {
   @Column({ type: "text" })
   public token: string
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamptz" })
   public expiresAt: Date
 
   @Column({ type: "text", nullable: true })

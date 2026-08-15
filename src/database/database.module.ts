@@ -1,58 +1,28 @@
-import { Global, Module } from "@nestjs/common"
-import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm"
-import { User } from "../modules/auth/entities/user.entity.js"
-import { Session } from "../modules/auth/entities/session.entity.js"
-import { Account } from "../modules/auth/entities/account.entity.js"
-import { Verification } from "../modules/auth/entities/verification.entity.js"
-import { Article } from "../modules/articles/entities/article.entity.js"
-import { ArticleTranslation } from "../modules/articles/entities/article-translation.entity.js"
-import { PGlitePool } from "./pglite-pool.js"
-import { TransactionContextService } from "./unit-of-work/transaction-context.service.js"
+import { Global, Module, type OnApplicationShutdown } from "@nestjs/common"
+import { DataSource } from "typeorm"
 import { UnitOfWork } from "./unit-of-work/unit-of-work.js"
-import { PostgresDataSourceOptions } from "typeorm/driver/postgres/PostgresDataSourceOptions.js"
-import { config } from "../config/index.js"
+import datasource from "./datasource.js"
 
 @Module({
-  imports: [
-    TypeOrmModule.forRootAsync({
-      useFactory() {
-        let options: TypeOrmModuleOptions = {
-          type: "postgres",
-          synchronize: config.app.environment !== "production",
-          entities: [User, Session, Account, Verification, Article, ArticleTranslation],
-          // migrations: [
-          //   process.env.NODE_ENV === "production"
-          //     ? "dist/database/migrations/*.js"
-          //     : "src/database/migrations/*.ts"
-          // ],
-          // migrationsTableName: "migrations",
-          // migrationsRun: process.env.NODE_ENV !== "test"
+  providers: [
+    {
+      provide: DataSource,
+      useFactory: async (): Promise<DataSource> => {
+        if (!datasource.isInitialized) {
+          await datasource.initialize()
         }
-
-        if (config.app.environment === "test") {
-          options = {
-            ...options,
-            driver: { Pool: PGlitePool },
-            uuidExtension: "pgcrypto"
-          }
-        } else {
-          options = {
-            ...options,
-            host: config.database.host,
-            port: config.database.port,
-            username: config.database.username,
-            password: config.database.password,
-            database: config.database.name,
-            ssl: true
-          } as PostgresDataSourceOptions
-        }
-
-        return options
+        return datasource
       }
-    })
+    },
+    UnitOfWork
   ],
-  providers: [TransactionContextService, UnitOfWork],
-  exports: [TransactionContextService, UnitOfWork]
+  exports: [DataSource, UnitOfWork]
 })
 @Global()
-export class DatabaseModule {}
+export class DatabaseModule implements OnApplicationShutdown {
+  public async onApplicationShutdown(): Promise<void> {
+    if (datasource.isInitialized) {
+      await datasource.destroy()
+    }
+  }
+}

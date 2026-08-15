@@ -1,7 +1,7 @@
 import { Column, Entity } from "typeorm"
 import { BaseEntity } from "../../../database/base.entity.js"
 
-@Entity({ name: "verification" })
+@Entity()
 export class Verification extends BaseEntity {
   @Column({ type: "text" })
   public identifier: string
@@ -9,6 +9,6 @@ export class Verification extends BaseEntity {
   @Column({ type: "text" })
   public value: string
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "text" })
   public expiresAt: Date
 }

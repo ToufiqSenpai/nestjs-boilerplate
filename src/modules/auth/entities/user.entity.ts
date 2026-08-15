@@ -3,7 +3,7 @@ import { BaseEntity } from "../../../database/base.entity.js"
 import { Account } from "./account.entity.js"
 import { Session } from "./session.entity.js"
 
-@Entity({ name: "user" })
+@Entity()
 export class User extends BaseEntity {
   @Column({ type: "text" })
   public name: string
@@ -27,7 +27,7 @@ export class User extends BaseEntity {
   @Column({ type: "text", nullable: true })
   public banReason: string | null
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: "timestamptz", nullable: true })
   public banExpires: Date | null
 
   @OneToMany(() => Account, account => account.user)

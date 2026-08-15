@@ -1,6 +1,5 @@
 import { DataSource, EntityManager, QueryRunner } from "typeorm"
 import { UnitOfWork } from "./unit-of-work.js"
-import { TransactionContextService } from "./transaction-context.service.js"
 import { vi } from "vitest"
 
 function createMocks() {
@@ -16,10 +15,9 @@ function createMocks() {
 
   dataSource.createQueryRunner.mockReturnValue(queryRunner)
 
-  const context = new TransactionContextService<EntityManager>()
-  const unitOfWork = new UnitOfWork(dataSource, context)
+  const unitOfWork = new UnitOfWork(dataSource)
 
-  return { dataSource, queryRunner, context, unitOfWork }
+  return { dataSource, queryRunner, unitOfWork }
 }
 
 describe("UnitOfWork", () => {
@@ -50,7 +48,7 @@ describe("UnitOfWork", () => {
     let seenManager: EntityManager | undefined
 
     await unitOfWork.transaction(async () => {
-      seenManager = unitOfWork["transactionContext"].getContext()
+      seenManager = unitOfWork.getContext()
     })
 
     expect(seenManager).toBe(queryRunner.manager)
@@ -114,7 +112,7 @@ describe("UnitOfWork", () => {
 
     await unitOfWork.transaction(async () => "ok")
 
-    expect(unitOfWork["transactionContext"].getContext()).toBeUndefined()
+    expect(unitOfWork.getContext()).toBeUndefined()
   })
 
   it("should pass the isolation level to startTransaction", async () => {

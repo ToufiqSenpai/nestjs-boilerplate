@@ -1,16 +1,12 @@
-import { ApiProperty } from "@nestjs/swagger"
 import { CreateDateColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
 
 export class BaseEntity {
   @PrimaryGeneratedColumn("uuid")
-  @ApiProperty({ readOnly: true })
   public id: string
 
-  @CreateDateColumn()
-  @ApiProperty({ readOnly: true })
+  @CreateDateColumn({ type: "timestamptz" })
   public createdAt: Date
 
-  @UpdateDateColumn()
-  @ApiProperty({ readOnly: true })
+  @UpdateDateColumn({ type: "timestamptz" })
   public updatedAt: Date
 }

@@ -9,12 +9,12 @@ export enum ArticleStatus {
   ARCHIVED = "archived"
 }
 
-@Entity({ name: "article" })
+@Entity()
 export class Article extends BaseEntity {
   @Column({ type: "enum", default: ArticleStatus.DRAFT, enum: ArticleStatus })
   public status: ArticleStatus
 
-  @Column({ type: "timestamp", nullable: true })
+  @Column({ type: "timestamptz", nullable: true })
   public publishedAt: Date | null
 
   @ManyToOne(() => User, { onDelete: "SET NULL", nullable: true })

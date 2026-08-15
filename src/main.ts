@@ -9,7 +9,6 @@ import { apiReference } from "@scalar/nestjs-api-reference"
 import { AuthService } from "@thallesp/nestjs-better-auth"
 import type { OpenAPIObject } from "@nestjs/swagger"
 import { AppModule } from "./app.module.js"
-import { useContainer } from "class-validator"
 
 export const app = await NestFactory.create(AppModule, { bufferLogs: true })
 app.enableShutdownHooks()
@@ -19,7 +18,6 @@ app.enableCors({
   origin: config.app.origins,
   credentials: true
 })
-useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
 if (config.app.environment === "development") {
   const swaggerConfig = new DocumentBuilder()

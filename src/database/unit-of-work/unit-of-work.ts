@@ -1,13 +1,15 @@
 import { Injectable } from "@nestjs/common"
+import { AsyncLocalStorage } from "async_hooks"
 import { DataSource, EntityManager } from "typeorm"
 import type { IsolationLevel } from "typeorm/driver/types/IsolationLevel.js"
-import { TransactionContextService } from "./transaction-context.service.js"
 
-export enum Propagation {
-  REQUIRED,
-  REQUIRES_NEW,
-  MANDATORY
-}
+export const Propagation = {
+  REQUIRED: "REQUIRED",
+  REQUIRES_NEW: "REQUIRES_NEW",
+  MANDATORY: "MANDATORY"
+} as const
+
+export type Propagation = (typeof Propagation)[keyof typeof Propagation]
 
 export interface TransactionOptions {
   /** Whether the callback may run inside an existing transaction. */
@@ -24,11 +26,15 @@ export interface TransactionOptions {
 export class UnitOfWork {
   public static instance: UnitOfWork | null = null
 
-  public constructor(
-    private readonly dataSource: DataSource,
-    private readonly transactionContext: TransactionContextService<EntityManager>
-  ) {
+  private readonly storage = new AsyncLocalStorage<EntityManager>()
+
+  public constructor(private readonly dataSource: DataSource) {
     UnitOfWork.instance = this
+  }
+
+  /** Returns the `EntityManager` of the active transaction, if any. */
+  public getContext(): EntityManager | undefined {
+    return this.storage.getStore()
   }
 
   /**
@@ -41,7 +47,7 @@ export class UnitOfWork {
    */
   public async transaction<T>(callback: () => Promise<T>, options: TransactionOptions = {}): Promise<T> {
     const { propagation = "REQUIRED" } = options
-    const activeManager = this.transactionContext.getContext()
+    const activeManager = this.getContext()
 
     if (propagation === Propagation.REQUIRED && activeManager) {
       return callback()
@@ -57,7 +63,7 @@ export class UnitOfWork {
       await queryRunner.startTransaction(options.isolationLevel)
       transactionStarted = true
 
-      const result = await this.transactionContext.run(queryRunner.manager, callback)
+      const result = await this.storage.run(queryRunner.manager, callback)
       await queryRunner.commitTransaction()
       await options.onCommit?.()
       return result

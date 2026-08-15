@@ -9,7 +9,6 @@ import { SentryContextMiddleware } from "./common/middlewares/sentry-context.mid
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter.js"
 import { StorageModule } from "./storage/storage.module.js"
 import { HealthModule } from "./modules/health/health.module.js"
-import { ValidationModule } from "./validation/validation.module.js"
 
 @Module({
   imports: [
@@ -32,8 +31,7 @@ import { ValidationModule } from "./validation/validation.module.js"
     }),
     SentryModule.forRoot(),
     StorageModule,
-    HealthModule,
-    ValidationModule
+    HealthModule
   ],
   providers: [
     {

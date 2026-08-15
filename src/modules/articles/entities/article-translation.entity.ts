@@ -8,7 +8,7 @@ import { Article } from "./article.entity.js";
 @Unique(["articleId", "locale"])
 @Unique(["locale", "slug"])
 export class ArticleTranslation extends BaseEntity {
-  @Column({ type: "text", default: DEFAULT_LOCALE })
+  @Column({ type: "text", default: DEFAULT_LOCALE.locale })
   public locale: Locale
 
   @Column({ type: "uuid" })
@@ -18,10 +18,10 @@ export class ArticleTranslation extends BaseEntity {
   @JoinColumn({ name: "articleId" })
   public article: Promise<Article>
 
-  @Column()
+  @Column({ type: "text" })
   public title: string
 
-  @Column()
+  @Column({ type: "text" })
   public slug: string
 
   @Column({ type: "text" })
@@ -30,9 +30,9 @@ export class ArticleTranslation extends BaseEntity {
   @Column({ type: "jsonb" })
   public content: Record<string, unknown>
 
-  @Column()
+  @Column({ type: "text" })
   public metaTitle: string
 
-  @Column()
+  @Column({ type: "text" })
   public metaDescription: string
 }

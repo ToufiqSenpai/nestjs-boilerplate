@@ -2,20 +2,20 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm"
 import { BaseEntity } from "../../../database/base.entity.js"
 import { User } from "./user.entity.js"
 
-@Entity({ name: "account" })
+@Entity()
 @Index("IDX_account_userId", ["userId"])
 export class Account extends BaseEntity {
-  @Column({ type: "text" })
+  @Column({ type: "uuid" })
   public userId: string
 
   @ManyToOne(() => User, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   public user: Promise<User>
 
-  @Column({ type: "text" })
+  @Column({ type: "uuid" })
   public accountId: string
 
-  @Column({ type: "text" })
+  @Column({ type: "uuid" })
   public providerId: string
 
   @Column({ type: "text", nullable: true })
