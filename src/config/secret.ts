@@ -18,10 +18,6 @@ const allSecrets = await infisical.secrets().listSecrets({
   projectId: projectId
 })
 
-export const secrets = allSecrets.secrets.reduce(
-  (acc, secret) => {
-    acc[secret.secretKey] = secret.secretValue
-    return acc
-  },
-  {} as Record<string, any>
-)
+for (const { secretKey, secretValue } of allSecrets.secrets) {
+  process.env[secretKey] = secretValue
+}

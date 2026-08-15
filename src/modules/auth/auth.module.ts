@@ -6,8 +6,8 @@ import { admin, openAPI } from "better-auth/plugins"
 import { hash, verify, type Options } from "@node-rs/argon2"
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth"
 import { createDatabaseAdapter } from "./database-adapter.js"
-import { ConfigService } from "@nestjs/config"
 import { EmailService } from "../../email/email.service.js"
+import { config } from "../../config/index.js"
 
 const ARGON2_OPTIONS: Options = {
   memoryCost: 37888, // 37 MiB
@@ -20,7 +20,7 @@ const ARGON2_OPTIONS: Options = {
 @Module({
   imports: [
     BetterAuthModule.forRootAsync({
-      useFactory(dataSource: DataSource, config: ConfigService, logger: Logger, emailService: EmailService) {
+      useFactory(dataSource: DataSource, logger: Logger, emailService: EmailService) {
         const auth = betterAuth({
           database: createDatabaseAdapter(dataSource),
           logger: {
@@ -42,17 +42,17 @@ const ARGON2_OPTIONS: Options = {
               }
             }
           },
-          secret: config.getOrThrow("BETTER_AUTH_SECRET"),
-          baseURL: config.getOrThrow("app.baseURL"),
-          trustedOrigins: config.getOrThrow<string[]>("app.origins"),
+          secret: config.auth.secret,
+          baseURL: config.app.baseURL,
+          trustedOrigins: config.app.origins,
           socialProviders: {
             google: {
-              clientId: config.getOrThrow("GOOGLE_CLIENT_ID"),
-              clientSecret: config.getOrThrow("GOOGLE_CLIENT_SECRET")
+              clientId: config.auth.google.clientId,
+              clientSecret: config.auth.google.clientSecret
             }
           },
           rateLimit: {
-            enabled: process.env.NODE_ENV !== "test",
+            enabled: config.app.environment !== "test",
             window: 10,
             max: 100,
             customRules: {
@@ -128,7 +128,7 @@ const ARGON2_OPTIONS: Options = {
               logger.log({ event: "email-verified", userId: user.id }, "Email verified successfully")
             }
           },
-          plugins: [admin(), ...(process.env.NODE_ENV === "development" ? [openAPI()] : [])],
+          plugins: [admin(), ...(config.app.environment === "development" ? [openAPI()] : [])],
           databaseHooks: {
             session: {
               create: {
@@ -167,7 +167,7 @@ const ARGON2_OPTIONS: Options = {
         })
         return { auth }
       },
-      inject: [DataSource, ConfigService, Logger, EmailService]
+      inject: [DataSource, Logger, EmailService]
     })
   ],
   exports: [BetterAuthModule]

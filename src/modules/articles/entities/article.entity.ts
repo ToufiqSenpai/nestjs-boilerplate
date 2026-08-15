@@ -22,5 +22,5 @@ export class Article extends BaseEntity {
   public author: User | null
 
   @OneToMany(() => ArticleTranslation, translation => translation.article)
-  public translations: ArticleTranslation[]
+  public translations: Promise<ArticleTranslation[]>
 }

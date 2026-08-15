@@ -1,11 +1,11 @@
 import * as Sentry from "@sentry/nestjs"
 import { pinoIntegration } from "@sentry/nestjs"
-import { secrets } from "./config/infisical.js"
+import { config } from "./config/index.js"
 
 Sentry.init({
-  dsn: process.env.NODE_ENV === "test" ? undefined : secrets.SENTRY_DSN,
-  enabled: process.env.NODE_ENV !== "test",
-  environment: process.env.NODE_ENV,
+  dsn: config.sentry.dsn,
+  enabled: config.app.environment !== "test",
+  environment: config.app.environment,
   dataCollection: {
     userInfo: false,
     httpBodies: [],
@@ -13,7 +13,7 @@ Sentry.init({
   },
   enableLogs: true,
   integrations: [pinoIntegration()],
-  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+  tracesSampleRate: config.app.environment === "production" ? 0.1 : 1.0,
   ignoreErrors: ["ECONNRESET", /^ETIMEDOUT/],
   beforeSend(event) {
     const headers = event.request?.headers as Record<string, string> | undefined

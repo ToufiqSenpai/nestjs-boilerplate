@@ -3,7 +3,7 @@ import { fileURLToPath } from "url"
 import { resolve } from "node:path"
 import { NestFactory } from "@nestjs/core"
 import { Logger } from "nestjs-pino"
-import { ConfigService } from "@nestjs/config"
+import { config } from "./config/index.js"
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
 import { apiReference } from "@scalar/nestjs-api-reference"
 import { AuthService } from "@thallesp/nestjs-better-auth"
@@ -12,24 +12,22 @@ import { AppModule } from "./app.module.js"
 import { useContainer } from "class-validator"
 
 export const app = await NestFactory.create(AppModule, { bufferLogs: true })
-const config = app.get(ConfigService)
-const baseURL = config.getOrThrow<string>("app.baseURL")
 app.enableShutdownHooks()
 app.useLogger(app.get(Logger))
 app.setGlobalPrefix("api")
 app.enableCors({
-  origin: config.get<string[]>("app.origins", []),
+  origin: config.app.origins,
   credentials: true
 })
 useContainer(app.select(AppModule), { fallbackOnErrors: true })
 
-if (process.env.NODE_ENV === "development") {
+if (config.app.environment === "development") {
   const swaggerConfig = new DocumentBuilder()
     .setTitle("Nest Boilerplate API")
     .setDescription("API documentation")
     .setVersion("1.0")
     .setContact("Muhammad Taufiqurrahman", "https://github.com/ToufiqSenpai", "taufiqurrahman.business@gmail.com")
-    .addServer(baseURL)
+    .addServer(config.app.baseURL)
     .build()
 
   const document = SwaggerModule.createDocument(app, swaggerConfig)
@@ -39,7 +37,7 @@ if (process.env.NODE_ENV === "development") {
     handler: (request: Request) => Promise<Response>
   }
   const schemaResponse = await auth.handler(
-    new Request(`${baseURL}/api/auth/open-api/generate-schema`)
+    new Request(`${config.app.baseURL}/api/auth/open-api/generate-schema`)
   )
   const authSchema = (await schemaResponse.json()) as OpenAPIObject
 
@@ -81,6 +79,6 @@ if (process.env.NODE_ENV === "development") {
 const mainPath = fileURLToPath(import.meta.url)
 const entryPath = process.argv[1] ? resolve(process.argv[1]) : ""
 if (entryPath === mainPath || `${entryPath}.js` === mainPath)
-  await app.listen(config.get<number>("app.port", 8080))
+  await app.listen(config.app.port)
 else
   await app.init()

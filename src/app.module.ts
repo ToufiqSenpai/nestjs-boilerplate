@@ -1,8 +1,7 @@
-import { MiddlewareConsumer, Module, NestModule, BadRequestException, ValidationPipe } from "@nestjs/common"
-import { APP_FILTER, APP_PIPE } from "@nestjs/core"
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common"
+import { APP_FILTER } from "@nestjs/core"
 import { LoggerModule } from "nestjs-pino"
 import { SentryModule } from "@sentry/nestjs/setup"
-import { ConfigModule } from "./config/config.module.js"
 import { DatabaseModule } from "./database/database.module.js"
 import { AuthModule } from "./modules/auth/auth.module.js"
 import { EmailModule } from "./email/email.module.js"
@@ -14,7 +13,6 @@ import { ValidationModule } from "./validation/validation.module.js"
 
 @Module({
   imports: [
-    ConfigModule,
     AuthModule,
     DatabaseModule,
     EmailModule,
@@ -41,35 +39,6 @@ import { ValidationModule } from "./validation/validation.module.js"
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter
-    },
-    {
-      provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        transform: true,
-        whitelist: true,
-        exceptionFactory(errors): BadRequestException {
-          const formattedErrors: Record<string, string[]> = {}
-
-          for (const err of errors) {
-            if (err.constraints) {
-              formattedErrors[err.property] = Object.values(err.constraints)
-            }
-
-            if (err.children && err.children.length > 0) {
-              for (const child of err.children) {
-                if (child.constraints) {
-                  formattedErrors[`${err.property}.${child.property}`] = Object.values(child.constraints)
-                }
-              }
-            }
-          }
-
-          return new BadRequestException({
-            message: "Validation Failed",
-            errors: formattedErrors
-          })
-        }
-      })
     }
   ]
 })

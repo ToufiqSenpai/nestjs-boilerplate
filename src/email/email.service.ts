@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { ConfigService } from "@nestjs/config"
 import { Logger } from "nestjs-pino"
 import * as Sentry from "@sentry/nestjs"
 import { CreateEmailOptions, Resend } from "resend"
 import { createElement, type ComponentProps, type FunctionComponent } from "react"
-import { randomUUID } from "node:crypto"
+import { randomUUID } from "crypto"
 import { EMAIL_TEMPLATES, type EmailTemplateName } from "./templates/index.js"
 import { getTranslator, type Locale } from "../i18n/index.js"
+import { config } from "../config/index.js"
 
 interface SendEmailParams<T extends EmailTemplateName> {
   to: string
@@ -21,17 +21,11 @@ interface SendEmailParams<T extends EmailTemplateName> {
 @Injectable()
 export class EmailService {
   private readonly MAX_RETRIES = 3
-  private readonly emailFrom: string
-  private readonly emailReplyTo?: string
 
   public constructor(
     private readonly resend: Resend,
     private readonly logger: Logger,
-    config: ConfigService
-  ) {
-    this.emailFrom = config.getOrThrow<string>("email.from")
-    this.emailReplyTo = config.get<string>("email.replyTo")
-  }
+  ) {}
 
   public async send<T extends EmailTemplateName>({
     to,
@@ -46,14 +40,14 @@ export class EmailService {
     const Component = EMAIL_TEMPLATES[template] as unknown as FunctionComponent<Record<string, unknown>>
 
     const payload: CreateEmailOptions = {
-      from: this.emailFrom,
+      from: config.email.from,
       to: [to],
       subject: t("subject"),
       react: createElement(Component, {
         ...props,
         locale: locale
       }),
-      ...(this.emailReplyTo ? { replyTo: this.emailReplyTo } : {}),
+      replyTo: config.email.replyTo,
       tags: [
         { name: "email_type", value: emailType },
         { name: "user_id", value: userId }

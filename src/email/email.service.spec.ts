@@ -1,23 +1,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { ConfigService } from "@nestjs/config"
 import { Logger } from "nestjs-pino"
 import { Resend, type CreateEmailResponse } from "resend"
-import { EmailService, type SendEmailParams } from "./email.service.js"
+import { EmailService } from "./email.service.js"
 import VerificationEmail from "./templates/verification.js"
 
 vi.mock("@sentry/nestjs", () => ({
-  captureException: vi.fn(),
+  captureException: vi.fn()
 }))
 
 function createMocks() {
-  const config = {
-    getOrThrow: vi.fn().mockImplementation((key: string) => {
-      if (key === "email.from") return "Acme <no-reply@acme.com>"
-      throw new Error(`Missing config key: ${key}`)
-    }),
-    get: vi.fn().mockReturnValue(undefined)
-  } as unknown as ConfigService
-
   const logger = {
     log: vi.fn(),
     error: vi.fn(),
@@ -27,7 +18,7 @@ function createMocks() {
   const send = vi.fn()
   const resend = { emails: { send } } as unknown as Resend
 
-  return { config, logger, resend, send }
+  return { logger, resend, send }
 }
 
 function success(id = "msg_123"): CreateEmailResponse {
@@ -51,27 +42,17 @@ const DEFAULT_SUBJECT = "Verify your email for Acme"
 describe("EmailService", () => {
   let mocks: ReturnType<typeof createMocks>
   let service: EmailService
-  let defaultParams: SendEmailParams<"verification">
+  let defaultParams: Parameters<EmailService["send"]>[0]
 
   beforeEach(() => {
     mocks = createMocks()
-    service = new EmailService(mocks.resend, mocks.logger, mocks.config)
+    service = new EmailService(mocks.resend, mocks.logger)
     defaultParams = {
       to: "user@example.com",
       template: "verification",
       props: { name: "John", verificationUrl: "https://example.com/verify/1" },
       userId: "user-42"
     }
-  })
-
-  describe("constructor", () => {
-    it("should throw when email.from is missing", () => {
-      mocks.config.getOrThrow.mockImplementation((key: string) => {
-        throw new Error(`Missing config key: ${key}`)
-      })
-
-      expect(() => new EmailService(mocks.resend, mocks.logger, mocks.config)).toThrow()
-    })
   })
 
   describe("send", () => {
@@ -84,7 +65,8 @@ describe("EmailService", () => {
 
       const [payload, options] = mocks.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
       expect(payload).toMatchObject({
-        from: "Acme <no-reply@acme.com>",
+        from: "Acme <onboarding@resend.dev>",
+        replyTo: "support@example.com",
         to: ["user@example.com"],
         subject: DEFAULT_SUBJECT,
         tags: [
@@ -100,28 +82,7 @@ describe("EmailService", () => {
           locale: "en"
         }
       })
-      expect(payload).not.toHaveProperty("replyTo")
       expect(options.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
-    })
-
-    it("should not include replyTo when not configured", async () => {
-      mocks.send.mockResolvedValue(success())
-
-      await service.send(defaultParams)
-
-      const [payload] = mocks.send.mock.calls[0] as [Record<string, unknown>]
-      expect(payload).not.toHaveProperty("replyTo")
-    })
-
-    it("should include replyTo when configured", async () => {
-      mocks.config.get.mockReturnValue("replies@example.com")
-      mocks.send.mockResolvedValue(success())
-
-      const svc = new EmailService(mocks.resend, mocks.logger, mocks.config)
-      await svc.send(defaultParams)
-
-      const [payload] = mocks.send.mock.calls[0] as [Record<string, unknown>]
-      expect(payload.replyTo).toBe("replies@example.com")
     })
 
     it("should log the email-sent event with the message id", async () => {

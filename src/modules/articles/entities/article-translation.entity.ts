@@ -16,7 +16,7 @@ export class ArticleTranslation extends BaseEntity {
 
   @ManyToOne(() => Article, { onDelete: "CASCADE" })
   @JoinColumn({ name: "articleId" })
-  public article: Article
+  public article: Promise<Article>
 
   @Column()
   public title: string
