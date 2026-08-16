@@ -9,6 +9,7 @@ import { Verification } from "../modules/auth/entities/verification.entity.js"
 import { Article } from "../modules/articles/entities/article.entity.js"
 import { ArticleTranslation } from "../modules/articles/entities/article-translation.entity.js"
 import { PGlitePool } from "./pglite.js"
+import { DatabaseLogger } from "./database.logger.js"
 
 let options: DataSourceOptions = {
   type: "postgres" as const,
@@ -16,7 +17,9 @@ let options: DataSourceOptions = {
   migrations: [import.meta.dirname + "/migrations/**/*{.js,.ts}"],
   migrationsRun: true,
   migrationsTableName: "migrations",
-  migrationsTransactionMode: "all"
+  migrationsTransactionMode: "all",
+  logger: new DatabaseLogger(),
+  logging: ["query", "error", "warn", "schema", "migration"]
 }
 
 if (config.app.environment === "test") {

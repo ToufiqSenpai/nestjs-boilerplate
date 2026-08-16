@@ -1,5 +1,4 @@
-import { Global, Module } from "@nestjs/common"
-import { Logger } from "nestjs-pino"
+import { Global, Logger, Module } from "@nestjs/common"
 import { DataSource } from "typeorm"
 import { betterAuth } from "better-auth"
 import { admin, openAPI } from "better-auth/plugins"
@@ -17,10 +16,12 @@ const ARGON2_OPTIONS: Options = {
   algorithm: 2 // Argon2id variant
 }
 
+const logger = new Logger("AuthModule")
+
 @Module({
   imports: [
     BetterAuthModule.forRootAsync({
-      useFactory(dataSource: DataSource, logger: Logger, emailService: EmailService) {
+      useFactory(dataSource: DataSource, emailService: EmailService) {
         const auth = betterAuth({
           database: createDatabaseAdapter(dataSource),
           logger: {
@@ -167,7 +168,7 @@ const ARGON2_OPTIONS: Options = {
         })
         return { auth }
       },
-      inject: [DataSource, Logger, EmailService]
+      inject: [DataSource, EmailService]
     })
   ],
   exports: [BetterAuthModule]

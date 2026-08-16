@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { Logger } from "nestjs-pino"
 import { Resend, type CreateEmailResponse } from "resend"
 import { EmailService } from "./email.service.js"
 import VerificationEmail from "./templates/verification.js"
@@ -9,16 +8,10 @@ vi.mock("@sentry/nestjs", () => ({
 }))
 
 function createMocks() {
-  const logger = {
-    log: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn()
-  } as unknown as Logger
-
   const send = vi.fn()
   const resend = { emails: { send } } as unknown as Resend
 
-  return { logger, resend, send }
+  return { resend, send }
 }
 
 function success(id = "msg_123"): CreateEmailResponse {
@@ -46,7 +39,7 @@ describe("EmailService", () => {
 
   beforeEach(() => {
     mocks = createMocks()
-    service = new EmailService(mocks.resend, mocks.logger)
+    service = new EmailService(mocks.resend)
     defaultParams = {
       to: "user@example.com",
       template: "verification",
@@ -83,22 +76,6 @@ describe("EmailService", () => {
         }
       })
       expect(options.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
-    })
-
-    it("should log the email-sent event with the message id", async () => {
-      mocks.send.mockResolvedValue(success("msg_789"))
-
-      await service.send(defaultParams)
-
-      expect(mocks.logger.log).toHaveBeenCalledWith(
-        {
-          event: "email-sent",
-          emailType: "verification",
-          userId: "user-42",
-          messageId: "msg_789"
-        },
-        "Email sent"
-      )
     })
 
     it("should pass through a custom idempotencyKey", async () => {
@@ -159,7 +136,7 @@ describe("EmailService", () => {
       vi.useRealTimers()
     })
 
-    it("should retry with the same idempotency key and log a warning", async () => {
+    it("should retry with the same idempotency key", async () => {
       mocks.send.mockResolvedValueOnce(errorResult(429)).mockResolvedValueOnce(success("msg_retry"))
 
       const promise = service.send(defaultParams)
@@ -170,16 +147,6 @@ describe("EmailService", () => {
       const firstKey = mocks.send.mock.calls[0][1].idempotencyKey
       const secondKey = mocks.send.mock.calls[1][1].idempotencyKey
       expect(firstKey).toBe(secondKey)
-      expect(mocks.logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "email-send-retry",
-          attempt: 1,
-          emailType: "verification",
-          userId: "user-42"
-        }),
-        "Retrying email send"
-      )
-      expect(mocks.logger.log).toHaveBeenCalledWith(expect.objectContaining({ event: "email-sent", messageId: "msg_retry" }), "Email sent")
     })
 
     it("should give up after three attempts on a retryable error", async () => {
@@ -190,14 +157,6 @@ describe("EmailService", () => {
       await promise
 
       expect(mocks.send).toHaveBeenCalledTimes(3)
-      expect(mocks.logger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: "email-send-failed",
-          statusCode: 500,
-          error: "server error"
-        }),
-        "Email send failed"
-      )
     })
 
     it("should not retry on a non-retryable error", async () => {
@@ -206,7 +165,6 @@ describe("EmailService", () => {
       await service.send(defaultParams)
 
       expect(mocks.send).toHaveBeenCalledTimes(1)
-      expect(mocks.logger.error).toHaveBeenCalledWith(expect.objectContaining({ event: "email-send-failed", statusCode: 400 }), "Email send failed")
     })
   })
 })

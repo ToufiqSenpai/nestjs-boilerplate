@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { getRepositoryToken } from "@nestjs/typeorm"
 import { DataSource, EntitySchema } from "typeorm"
-import { UnitOfWork } from "./unit-of-work/unit-of-work.js"
+import { UnitOfWork } from "./transaction/unit-of-work.js"
 
 export type EntityClassOrSchema = EntitySchema | (new (...args: any[]) => object)
 

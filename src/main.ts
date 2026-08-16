@@ -1,18 +1,19 @@
 import "./instrument.js"
 import { fileURLToPath } from "url"
-import { resolve } from "node:path"
+import { resolve } from "path"
 import { NestFactory } from "@nestjs/core"
-import { Logger } from "nestjs-pino"
 import { config } from "./config/index.js"
+import { logger } from "./logger/index.js"
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
 import { apiReference } from "@scalar/nestjs-api-reference"
 import { AuthService } from "@thallesp/nestjs-better-auth"
 import type { OpenAPIObject } from "@nestjs/swagger"
 import { AppModule } from "./app.module.js"
 
-export const app = await NestFactory.create(AppModule, { bufferLogs: true })
+export const app = await NestFactory.create(AppModule, {
+  logger
+})
 app.enableShutdownHooks()
-app.useLogger(app.get(Logger))
 app.setGlobalPrefix("api")
 app.enableCors({
   origin: config.app.origins,
@@ -34,9 +35,7 @@ if (config.app.environment === "development") {
   const auth = authService.instance as unknown as {
     handler: (request: Request) => Promise<Response>
   }
-  const schemaResponse = await auth.handler(
-    new Request(`${config.app.baseURL}/api/auth/open-api/generate-schema`)
-  )
+  const schemaResponse = await auth.handler(new Request(`${config.app.baseURL}/api/auth/open-api/generate-schema`))
   const authSchema = (await schemaResponse.json()) as OpenAPIObject
 
   // Rename the "Default" tag from the better-auth openAPI plugin to "Auth"
@@ -68,7 +67,7 @@ if (config.app.environment === "development") {
 
   SwaggerModule.setup("/api/openapi.json", app, document, {
     swaggerUiEnabled: false,
-    jsonDocumentUrl: "/api/openapi.json",
+    jsonDocumentUrl: "/api/openapi.json"
   })
 
   app.use("/api/docs", apiReference({ url: "/api/openapi.json" }))
@@ -76,7 +75,7 @@ if (config.app.environment === "development") {
 
 const mainPath = fileURLToPath(import.meta.url)
 const entryPath = process.argv[1] ? resolve(process.argv[1]) : ""
-if (entryPath === mainPath || `${entryPath}.js` === mainPath)
+if (entryPath === mainPath || `${entryPath}.js` === mainPath) {
   await app.listen(config.app.port)
-else
-  await app.init()
+}
+else await app.init()

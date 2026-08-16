@@ -1,9 +1,9 @@
-import tseslint from "typescript-eslint";
-import eslintConfigPrettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint"
+import eslintConfigPrettier from "eslint-config-prettier"
 
 export default tseslint.config(
   {
-    ignores: ["dist/", "node_modules/", ".commandcode/"],
+    ignores: ["dist/", "node_modules/", ".commandcode/"]
   },
   ...tseslint.configs.recommended,
   ...tseslint.configs.stylistic,
@@ -11,12 +11,24 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+        tsconfigRootDir: import.meta.dirname
+      }
+    }
   },
   {
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          args: "after-used",
+          argsIgnorePattern: "^_",
+          caughtErrors: "none",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+          vars: "all",
+          varsIgnorePattern: "^_"
+        }
+      ],
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-floating-promises": "warn",
       "@typescript-eslint/no-namespace": "off",
@@ -37,8 +49,8 @@ export default tseslint.config(
       "@typescript-eslint/no-mixed-enums": "error",
       "@typescript-eslint/no-unsafe-declaration-merging": "error",
       "@typescript-eslint/no-unsafe-enum-comparison": "error",
-      "@typescript-eslint/no-unsafe-function-type": "error",
-    },
+      "@typescript-eslint/no-unsafe-function-type": "error"
+    }
   },
-  eslintConfigPrettier,
-);
+  eslintConfigPrettier
+)

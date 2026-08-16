@@ -1,4 +1,5 @@
 import "./secret.js"
+import pino from "pino"
 import { z } from "zod"
 
 const environmentSchema = z
@@ -51,6 +52,12 @@ const configSchema = z
       })
       .strict()
       .describe("Email configuration"),
+    log: z
+      .object({
+        level: z.enum(Object.keys(pino.levels.values)).default("info").describe("Log level")
+      })
+      .strict()
+      .describe("Logger configuration"),
     s3: z
       .object({
         accessKeyId: z.string().min(1).max(128).describe("S3 access key ID"),
@@ -93,6 +100,13 @@ export const config = configSchema.parse({
   email: {
     resendAPIKey: process.env.RESEND_API_KEY
   },
+  log: {
+    level: defaultEnvironment({
+      development: "debug",
+      test: "trace",
+      production: "info"
+    })
+  },
   s3: {
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
@@ -105,9 +119,7 @@ export const config = configSchema.parse({
   }
 })
 
-function defaultEnvironment<T = unknown>(
-  values: Partial<Record<Environment, T>>
-): T {
+function defaultEnvironment<T = unknown>(values: Partial<Record<Environment, T>>): T {
   const parsed = environmentSchema.safeParse(process.env.NODE_ENV)
   const env = parsed.success ? parsed.data : "development"
 

@@ -1,6 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common"
 import { APP_FILTER } from "@nestjs/core"
-import { LoggerModule } from "nestjs-pino"
 import { SentryModule } from "@sentry/nestjs/setup"
 import { DatabaseModule } from "./database/database.module.js"
 import { AuthModule } from "./modules/auth/auth.module.js"
@@ -15,20 +14,6 @@ import { HealthModule } from "./modules/health/health.module.js"
     AuthModule,
     DatabaseModule,
     EmailModule,
-    LoggerModule.forRoot({
-      pinoHttp: {
-        autoLogging: false,
-        transport: {
-          target: "pino-pretty",
-          options: {
-            singleLine: true,
-            colorize: true,
-            translateTime: "SYS:standard",
-            ignore: "pid,hostname"
-          }
-        }
-      }
-    }),
     SentryModule.forRoot(),
     StorageModule,
     HealthModule

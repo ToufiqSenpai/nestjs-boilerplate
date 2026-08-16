@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import { Logger } from "nestjs-pino"
+import { Injectable, Logger } from "@nestjs/common"
 import * as Sentry from "@sentry/nestjs"
 import { CreateEmailOptions, Resend } from "resend"
 import { createElement, type ComponentProps, type FunctionComponent } from "react"
@@ -21,10 +20,10 @@ interface SendEmailParams<T extends EmailTemplateName> {
 @Injectable()
 export class EmailService {
   private readonly MAX_RETRIES = 3
+  private readonly logger = new Logger(EmailService.name)
 
   public constructor(
     private readonly resend: Resend,
-    private readonly logger: Logger,
   ) {}
 
   public async send<T extends EmailTemplateName>({

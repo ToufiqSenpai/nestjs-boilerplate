@@ -1,6 +1,6 @@
 import { Global, Module, type OnApplicationShutdown } from "@nestjs/common"
 import { DataSource } from "typeorm"
-import { UnitOfWork } from "./unit-of-work/unit-of-work.js"
+import { UnitOfWork } from "./transaction/unit-of-work.js"
 import datasource from "./datasource.js"
 
 @Module({
