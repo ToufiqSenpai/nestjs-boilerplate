@@ -1,6 +1,8 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { S3Client } from "@aws-sdk/client-s3"
 import { config } from "../config/index.js";
+import { Storage } from "./storage.js";
+import { FormInterceptor } from "../libs/form/form.interceptor.js";
 
 @Module({
   providers: [
@@ -15,8 +17,11 @@ import { config } from "../config/index.js";
           secretAccessKey: config.s3.secretAccessKey
         }
       }),
-    }
+    },
+    Storage,
+    FormInterceptor
   ],
-  exports: [S3Client]
+  exports: [Storage, FormInterceptor]
 })
+@Global()
 export class StorageModule {}

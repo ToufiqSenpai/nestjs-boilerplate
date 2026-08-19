@@ -1,4 +1,5 @@
 import "./instrument.js"
+import { json } from "express"
 import { fileURLToPath } from "url"
 import { resolve } from "path"
 import { NestFactory } from "@nestjs/core"
@@ -11,7 +12,8 @@ import type { OpenAPIObject } from "@nestjs/swagger"
 import { AppModule } from "./app.module.js"
 
 export const app = await NestFactory.create(AppModule, {
-  logger
+  logger,
+  bodyParser: false
 })
 app.enableShutdownHooks()
 app.setGlobalPrefix("api")
@@ -19,6 +21,7 @@ app.enableCors({
   origin: config.app.origins,
   credentials: true
 })
+app.use(json({ limit: "10mb", type: "application/json" }))
 
 if (config.app.environment === "development") {
   const swaggerConfig = new DocumentBuilder()

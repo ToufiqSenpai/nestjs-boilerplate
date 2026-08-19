@@ -10,7 +10,7 @@ export class SentryContextMiddleware implements NestMiddleware {
     next: NextFunction
   ): void {
     if (req.user) {
-      Sentry.setUser({ id: String(req.user.id), email: req.user.email })
+      Sentry.setUser({ id: req.user.id, email: req.user.email })
       if (req.user.role) {
         Sentry.setTag("user.role", req.user.role)
       }

@@ -16,7 +16,7 @@ Sentry.init({
   tracesSampleRate: config.app.environment === "production" ? 0.1 : 1.0,
   ignoreErrors: ["ECONNRESET", /^ETIMEDOUT/],
   beforeSend(event) {
-    const headers = event.request?.headers as Record<string, string> | undefined
+    const headers = event.request?.headers
     if (headers?.["authorization"]) {
       headers["authorization"] = "[filtered]"
     }

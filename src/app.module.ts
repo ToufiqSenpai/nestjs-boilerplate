@@ -1,5 +1,11 @@
-import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common"
-import { APP_FILTER } from "@nestjs/core"
+import {
+  BadRequestException,
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  StandardSchemaValidationPipe
+} from "@nestjs/common"
+import { APP_FILTER, APP_PIPE } from "@nestjs/core"
 import { SentryModule } from "@sentry/nestjs/setup"
 import { DatabaseModule } from "./database/database.module.js"
 import { AuthModule } from "./modules/auth/auth.module.js"
@@ -8,6 +14,7 @@ import { SentryContextMiddleware } from "./common/middlewares/sentry-context.mid
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter.js"
 import { StorageModule } from "./storage/storage.module.js"
 import { HealthModule } from "./modules/health/health.module.js"
+import { ArticleModule } from "./modules/articles/article.module.js"
 
 @Module({
   imports: [
@@ -16,12 +23,27 @@ import { HealthModule } from "./modules/health/health.module.js"
     EmailModule,
     SentryModule.forRoot(),
     StorageModule,
-    HealthModule
+    HealthModule,
+    ArticleModule
   ],
   providers: [
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter
+    },
+    {
+      provide: APP_PIPE,
+      useValue: new StandardSchemaValidationPipe({
+        exceptionFactory(issues) {
+          return new BadRequestException({
+            message: "Validation failed",
+            errors: issues.map(issue => ({
+              path: issue.path,
+              message: issue.message
+            }))
+          })
+        }
+      })
     }
   ]
 })

@@ -1,6 +1,5 @@
 import "reflect-metadata"
 import { DataSource, type DataSourceOptions } from "typeorm"
-import type { PostgresDataSourceOptions } from "typeorm/driver/postgres/PostgresDataSourceOptions.js"
 import { config } from "../config/index.js"
 import { User } from "../modules/auth/entities/user.entity.js"
 import { Session } from "../modules/auth/entities/session.entity.js"
@@ -27,7 +26,7 @@ if (config.app.environment === "test") {
     ...options,
     driver: { Pool: PGlitePool },
     uuidExtension: "pgcrypto"
-  } as PostgresDataSourceOptions
+  }
 } else {
   options = {
     ...options,

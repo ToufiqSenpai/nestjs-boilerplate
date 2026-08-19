@@ -17,6 +17,26 @@ export default tseslint.config(
   },
   {
     rules: {
+      "@typescript-eslint/adjacent-overload-signatures": "error",
+      "@typescript-eslint/consistent-generic-constructors": ["error", "constructor"],
+      "@typescript-eslint/consistent-indexed-object-style": ["error", "record"],
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        {
+          assertionStyle: "as",
+          objectLiteralTypeAssertions: "allow"
+        }
+      ],
+      "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+      "@typescript-eslint/consistent-type-exports": "error",
+      "@typescript-eslint/consistent-type-imports": [
+        "off",
+        {
+          prefer: "type-imports",
+          disallowTypeAnnotations: false
+        }
+      ],
+      "@typescript-eslint/default-param-last": "error",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
@@ -49,7 +69,14 @@ export default tseslint.config(
       "@typescript-eslint/no-mixed-enums": "error",
       "@typescript-eslint/no-unsafe-declaration-merging": "error",
       "@typescript-eslint/no-unsafe-enum-comparison": "error",
-      "@typescript-eslint/no-unsafe-function-type": "error"
+      "@typescript-eslint/no-unsafe-function-type": "error",
+      "@typescript-eslint/no-unnecessary-condition": "error",
+      "@typescript-eslint/no-unnecessary-qualifier": "error",
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      "@typescript-eslint/no-unnecessary-type-conversion": "error",
+      "@typescript-eslint/no-unsafe-declaration-merging": "error",
+      "@typescript-eslint/no-unsafe-enum-comparison": "error",
+      "@typescript-eslint/no-unsafe-function-type": "error",
     }
   },
   eslintConfigPrettier

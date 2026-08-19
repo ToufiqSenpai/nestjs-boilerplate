@@ -62,7 +62,7 @@ const configSchema = z
       .object({
         accessKeyId: z.string().min(1).max(128).describe("S3 access key ID"),
         secretAccessKey: z.string().min(1).max(128).describe("S3 secret access key"),
-        bucket: z.string().min(1).max(63).optional().describe("S3 bucket name"),
+        bucket: z.string().min(1).max(63).describe("S3 bucket name"),
         endpoint: z.url().max(256).describe("S3 endpoint URL"),
         region: z.string().min(1).max(32).default("auto").describe("S3 region")
       })
@@ -102,7 +102,7 @@ export const config = configSchema.parse({
   },
   log: {
     level: defaultEnvironment({
-      development: "debug",
+      development: "trace",
       test: "trace",
       production: "info"
     })

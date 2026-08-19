@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus } from "@nestjs/common"
+import { BadRequestException, HttpException, HttpStatus } from "@nestjs/common"
 import type { ArgumentsHost } from "@nestjs/common"
 import { Request, Response } from "express"
 import { GlobalExceptionFilter } from "./global-exception.filter.js"
@@ -36,8 +36,6 @@ describe("GlobalExceptionFilter", () => {
 
     expect(status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN)
     expect(json).toHaveBeenCalledWith({ message: "Forbidden" })
-    expect(json.mock.calls[0][0]).not.toHaveProperty("statusCode")
-    expect(json.mock.calls[0][0]).not.toHaveProperty("path")
   })
 
   it("should handle HttpException with object message", () => {
@@ -60,14 +58,43 @@ describe("GlobalExceptionFilter", () => {
     expect(json).toHaveBeenCalledWith({ message: "a, b" })
   })
 
-  it("should fallback to exception.message when response object has no message", () => {
+  it("should preserve extra fields and fallback message when response has no message", () => {
     const { host, json, status } = createHost()
     const exception = new HttpException({ error: "oops" } as never, HttpStatus.BAD_REQUEST)
 
     filter.catch(exception, host)
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
-    expect(json).toHaveBeenCalledWith({ message: exception.message })
+    expect(json).toHaveBeenCalledWith({ error: "oops", message: exception.message })
+  })
+
+  it("should forward all response fields including errors array and guarantee message", () => {
+    const { host, json, status } = createHost()
+    const exception = new BadRequestException({
+      message: "Validation failed",
+      errors: [{ path: "email", message: "invalid" }]
+    } as never)
+
+    filter.catch(exception, host)
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
+    expect(json).toHaveBeenCalledWith({
+      message: "Validation failed",
+      errors: [{ path: "email", message: "invalid" }]
+    })
+  })
+
+  it("should forward custom fields alongside normalized array message", () => {
+    const { host, json, status } = createHost()
+    const exception = new HttpException(
+      { message: ["a", "b"], code: "ERR_VALIDATION" } as never,
+      HttpStatus.BAD_REQUEST
+    )
+
+    filter.catch(exception, host)
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
+    expect(json).toHaveBeenCalledWith({ message: "a, b", code: "ERR_VALIDATION" })
   })
 
   it("should handle generic Error", () => {
