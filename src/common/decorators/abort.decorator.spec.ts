@@ -1,19 +1,14 @@
 import "reflect-metadata"
 import { describe, expect, it } from "vitest"
 import { PassThrough } from "stream"
-import { createParamDecorator, ExecutionContext } from "@nestjs/common"
+import { ExecutionContext } from "@nestjs/common"
 import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants"
 import { Abort } from "./abort.decorator.js"
 
-// Abort adalah decorator factory: panggil Abort() untuk mendapat decorator (target, key, index).
-// Factory aslinya (data, ctx) => ... tidak diekspor — ia tersimpan di metadata
-// ROUTE_ARGS_METADATA pada constructor class, dengan key nama method.
 function getAbortFactory(): (data: unknown, ctx: ExecutionContext) => AbortController {
   const target = class {}
   const key = "test"
   Abort()(target, key, 0)
-  // createParamDecorator menyimpan metadata di target.constructor (bukan target),
-  // dengan key nama method.
   const metadata = Reflect.getMetadata(ROUTE_ARGS_METADATA, target.constructor, key) as
     | Record<string, { factory?: (data: unknown, ctx: ExecutionContext) => AbortController }>
     | undefined

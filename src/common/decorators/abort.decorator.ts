@@ -25,7 +25,7 @@ export const Abort = createParamDecorator((_data: unknown, ctx: ExecutionContext
   })
   req.once("close", () => {
     if (controller.signal.aborted) return
-    const premature = req.complete === false || !!req.destroyed || req.readableEnded === false
+    const premature = req.complete === false || req.destroyed || req.readableEnded === false
     if (premature) controller.abort(new DOMException("Request aborted by client", "AbortError"))
   })
 

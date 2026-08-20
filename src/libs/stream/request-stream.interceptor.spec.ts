@@ -1,6 +1,6 @@
 import "reflect-metadata"
-import { describe, expect, it, vi, beforeEach } from "vitest"
-import { PassThrough, Readable } from "stream"
+import { describe, expect, it, vi } from "vitest"
+import { PassThrough } from "stream"
 import type { CallHandler, ExecutionContext } from "@nestjs/common"
 import { of } from "rxjs"
 import { RequestStreamInterceptor } from "./request-stream.interceptor.js"
@@ -42,7 +42,7 @@ describe("RequestStreamInterceptor", () => {
     const ctx = makeCtx(req)
     const next: CallHandler = { handle: () => of({}) }
 
-    interceptor.intercept(ctx, next)
+    void interceptor.intercept(ctx, next)
     req.end("hello")
 
     const chunks = await collect(req)
@@ -55,7 +55,7 @@ describe("RequestStreamInterceptor", () => {
     const ctx = makeCtx(req)
     const next: CallHandler = { handle: () => of({}) }
 
-    interceptor.intercept(ctx, next)
+    void interceptor.intercept(ctx, next)
     req.end(Buffer.alloc(10))
 
     await expect(collect(req)).rejects.toThrow(StreamValidationException)
@@ -67,7 +67,7 @@ describe("RequestStreamInterceptor", () => {
     const ctx = makeCtx(req)
     const next: CallHandler = { handle: () => of({}) }
 
-    interceptor.intercept(ctx, next)
+    void interceptor.intercept(ctx, next)
 
     expect(req.headers["content-type"]).toBe("application/octet-stream")
     expect(req.method).toBe("POST")
@@ -80,7 +80,7 @@ describe("RequestStreamInterceptor", () => {
     const next: CallHandler = { handle: () => of({}) }
     const onError = vi.fn()
 
-    interceptor.intercept(ctx, next)
+    void interceptor.intercept(ctx, next)
     req.on("error", onError)
     req.end(Buffer.alloc(10))
 

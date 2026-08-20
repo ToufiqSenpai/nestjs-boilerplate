@@ -1,11 +1,10 @@
 import { z, ZodError } from "zod"
 
 export class StorageKey {
-  private readonly sanitize = (s: string): string => s.replace(/[/\\\u0000-\u001f]/g, "")
   private readonly segmentSchema = z
     .string()
     .min(1, { error: "Collection/name must be non-empty" })
-    .transform(this.sanitize)
+    .transform(StorageKey.sanitize)
     .refine(v => v.length > 0, { error: "Collection/name becomes empty after sanitization" })
   private readonly keyStringSchema = z
     .string()
@@ -45,5 +44,9 @@ export class StorageKey {
       if (e instanceof ZodError) throw new Error(e.issues[0]?.message ?? "Invalid StorageKey")
       throw e
     }
+  }
+
+  public static sanitize(s: string): string {
+    return s.replace(/[/\\\u0000-\u001f]/g, "")
   }
 }

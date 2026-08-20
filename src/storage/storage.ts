@@ -166,8 +166,7 @@ export class Storage {
   }
 
   public async list(collection: string): Promise<FileMetadata[]> {
-    // Important for path sanitazion
-    const prefix = `${new StorageKey(collection, "__probe__").collection}/`
+    const prefix = `${StorageKey.sanitize(collection)}/`
     const objects: FileMetadata[] = []
     let continuationToken: string | undefined
 
