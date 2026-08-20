@@ -15,9 +15,7 @@ describe("AppController (e2e)", () => {
 
   it("runs against an in-memory PGlite database", async () => {
     const repository = dataSource.getRepository(User)
-    const user = await repository.save(
-      repository.create({ name: "Test User", email: "test@example.com" })
-    )
+    const user = await repository.save(repository.create({ name: "Test User", email: "test@example.com" }))
 
     expect(user.id).toBeDefined()
     expect(user.emailVerified).toBe(false)

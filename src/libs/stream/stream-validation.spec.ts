@@ -118,10 +118,8 @@ describe("StreamValidation", () => {
   })
 
   it("integrates with real validators: passes a PNG stream", async () => {
-    const stream = new StreamValidation<Buffer>(
-      new SizeLimitingValidator(1024),
-      new FileTypeValidator(["image/png"])
-    ).stream
+    const stream = new StreamValidation<Buffer>(new SizeLimitingValidator(1024), new FileTypeValidator(["image/png"]))
+      .stream
     stream.end(PNG_HEADER)
     const chunks = await collect(stream)
     expect(Buffer.concat(chunks).equals(PNG_HEADER)).toBe(true)

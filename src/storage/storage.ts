@@ -49,9 +49,7 @@ export interface FileMetadata {
 
 @Injectable()
 export class Storage {
-  public constructor(
-    private readonly s3: S3Client
-  ) {}
+  public constructor(private readonly s3: S3Client) {}
 
   public async upload({ key, stream, headers, signal }: UploadFileParams): Promise<FileMetadata> {
     const s3Key = key.toString()

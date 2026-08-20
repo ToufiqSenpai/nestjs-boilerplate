@@ -1,7 +1,7 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm";
-import { BaseEntity } from "../../../database/base.entity.js";
-import { User } from "../../auth/entities/user.entity.js";
-import { ArticleTranslation } from "./article-translation.entity.js";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
+import { BaseEntity } from "../../../database/base.entity.js"
+import { User } from "../../auth/entities/user.entity.js"
+import { ArticleTranslation } from "./article-translation.entity.js"
 
 export enum ArticleStatus {
   DRAFT = "draft",

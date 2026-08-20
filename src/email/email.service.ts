@@ -22,9 +22,7 @@ export class EmailService {
   private readonly MAX_RETRIES = 3
   private readonly logger = new Logger(EmailService.name)
 
-  public constructor(
-    private readonly resend: Resend,
-  ) {}
+  public constructor(private readonly resend: Resend) {}
 
   public async send<T extends EmailTemplateName>({
     to,
@@ -44,7 +42,7 @@ export class EmailService {
       subject: t("subject"),
       react: createElement(Component, {
         ...props,
-        locale: locale
+        locale
       }),
       replyTo: config.email.replyTo,
       tags: [

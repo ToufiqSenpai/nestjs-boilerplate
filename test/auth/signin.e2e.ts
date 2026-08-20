@@ -4,13 +4,7 @@ import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
 import { User } from "../../src/modules/auth/entities/user.entity.js"
 import { EmailService } from "../../src/email/email.service.js"
-import {
-  createCredentials,
-  signUp,
-  signIn,
-  getAuthCookie,
-  extractVerificationToken
-} from "./helpers.js"
+import { createCredentials, signUp, signIn, getAuthCookie, extractVerificationToken } from "./helpers.js"
 
 describe("POST /api/auth/sign-in/email", () => {
   let dataSource: DataSource
@@ -51,10 +45,7 @@ describe("POST /api/auth/sign-in/email", () => {
     const cookie = getAuthCookie(res)
     expect(cookie).toContain("better-auth.session_token")
 
-    const sessionRes = await request(app.getHttpServer())
-      .get("/api/auth/get-session")
-      .set("Cookie", cookie)
-      .expect(200)
+    const sessionRes = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", cookie).expect(200)
     expect(sessionRes.body.user.email).toBe(credentials.email.toLowerCase())
   })
 

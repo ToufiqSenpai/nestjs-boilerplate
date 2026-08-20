@@ -9,13 +9,13 @@ const projectId = process.env.INFISICAL_PROJECT_ID ?? ""
 const infisical = new InfisicalSDK()
 
 await infisical.auth().universalAuth.login({
-  clientId: clientId,
-  clientSecret: clientSecret
+  clientId,
+  clientSecret
 })
 
 const allSecrets = await infisical.secrets().listSecrets({
   environment: process.env.NODE_ENV || "development",
-  projectId: projectId
+  projectId
 })
 
 for (const { secretKey, secretValue } of allSecrets.secrets) {

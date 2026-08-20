@@ -10,9 +10,7 @@ interface LocaleRegistry {
   textDirection: TextDirection
 }
 
-const LOCALE_REGISTRY: LocaleRegistry[] = [
-  { locale: "en", message: en, textDirection: "ltr" }
-] as const
+const LOCALE_REGISTRY: LocaleRegistry[] = [{ locale: "en", message: en, textDirection: "ltr" }] as const
 
 export const DEFAULT_LOCALE = LOCALE_REGISTRY[0]
 

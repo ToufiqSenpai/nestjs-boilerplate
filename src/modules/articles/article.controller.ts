@@ -1,13 +1,17 @@
-import { Body, Controller, Post, UseInterceptors } from "@nestjs/common";
-import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import z from "zod";
-import { FormInterceptor } from "../../libs/form/form.interceptor.js";
-import { createFileSchema } from "../../libs/form/file.schema.js";
+import { Body, Controller, Post, UseInterceptors } from "@nestjs/common"
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth"
+import z from "zod"
+import { FormInterceptor } from "../../libs/form/form.interceptor.js"
+import { createFileSchema } from "../../libs/form/file.schema.js"
 
 const articleSchema = z.object({
   title: z.string().min(1).max(64),
   content: z.string(),
-  coverImage: createFileSchema({ mimetype: ["image/jpeg", "image/png"], collection: "articles", maxSize: 5 * 1024 * 1024 })
+  coverImage: createFileSchema({
+    mimetype: ["image/jpeg", "image/png"],
+    collection: "articles",
+    maxSize: 5 * 1024 * 1024
+  })
 })
 
 @Controller("articles")

@@ -39,7 +39,7 @@ describe("Transactional decorator", () => {
 
   it("should run the method inside a transaction when UnitOfWork.instance is set", async () => {
     const descriptor = {
-      value: function (this: { calls: number }) {
+      value(this: { calls: number }) {
         this.calls += 1
         return this.calls
       }

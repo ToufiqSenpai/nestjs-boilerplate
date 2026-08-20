@@ -57,7 +57,11 @@ describe("GET /api/auth/get-session", () => {
 describe("POST /api/auth/sign-out", () => {
   it("clears the session and subsequent get-session returns null", async () => {
     const { cookie } = await createVerifiedSession()
-    const signOutRes = await request(app.getHttpServer()).post("/api/auth/sign-out").set("Cookie", cookie).send({}).expect(200)
+    const signOutRes = await request(app.getHttpServer())
+      .post("/api/auth/sign-out")
+      .set("Cookie", cookie)
+      .send({})
+      .expect(200)
     expect(signOutRes.body.success).toBe(true)
     const after = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", cookie).expect(200)
     expect(after.body).toBeNull()
@@ -68,10 +72,13 @@ describe("POST /api/auth/update-user", () => {
   it("updates name when authenticated", async () => {
     const { cookie } = await createVerifiedSession()
     const newName = "Updated Name"
-    const res = await request(app.getHttpServer()).post("/api/auth/update-user").set("Cookie", cookie).send({ name: newName })
+    const res = await request(app.getHttpServer())
+      .post("/api/auth/update-user")
+      .set("Cookie", cookie)
+      .send({ name: newName })
     expect(res.status).toBe(200)
     const bodyUser = (res.body as { user?: { name: string } }).user ?? (res.body as { name: string })
-    const updatedName = (bodyUser).name ?? newName
+    const updatedName = bodyUser.name ?? newName
     expect(updatedName).toBe(newName)
     const session = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", cookie).expect(200)
     expect(session.body.user.name).toBe(newName)

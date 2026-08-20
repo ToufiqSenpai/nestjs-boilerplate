@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  OnApplicationShutdown,
-  ServiceUnavailableException
-} from "@nestjs/common"
+import { Controller, Get, OnApplicationShutdown, ServiceUnavailableException } from "@nestjs/common"
 import { HealthCheck, HealthCheckService, MemoryHealthIndicator, TypeOrmHealthIndicator } from "@nestjs/terminus"
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth"
 

@@ -10,25 +10,20 @@ const name = process.argv[3]
 const commands = ["generate", "run", "revert", "show", "create"] as const
 
 if (!command || !(commands as readonly string[]).includes(command)) {
-  console.error(
-    `Usage: node --import 'data:text/javascript,...' scripts/migration.ts <${commands.join("|")}> [name]`
-  )
+  console.error(`Usage: node --import 'data:text/javascript,...' scripts/migration.ts <${commands.join("|")}> [name]`)
   process.exit(1)
 }
 
 const dataSourcePath = "src/database/datasource.ts"
 const migrationsDir = resolve(root, "src", "database", "migrations")
 
-const args =
-  command === "generate" || command === "create"
-    ? [name ?? "init"]
-    : []
+const args = command === "generate" || command === "create" ? [name ?? "init"] : []
 
 const registerTsNode = [
   "data:text/javascript,",
   'import { register } from "node:module";',
   'import { pathToFileURL } from "node:url";',
-  `register("ts-node/esm", pathToFileURL(${JSON.stringify(root + "/")}));`,
+  `register("ts-node/esm", pathToFileURL(${JSON.stringify(root + "/")}));`
 ].join(" ")
 
 const result = spawnSync(
@@ -40,11 +35,11 @@ const result = spawnSync(
     `migration:${command}`,
     "-d",
     dataSourcePath,
-    ...(args.length ? [resolve(migrationsDir, args[0])] : []),
+    ...(args.length ? [resolve(migrationsDir, args[0])] : [])
   ],
   {
     cwd: root,
-    stdio: "inherit",
+    stdio: "inherit"
   }
 )
 

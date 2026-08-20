@@ -1,16 +1,9 @@
 import { EventEmitter } from "node:events"
 import { PGlite } from "@electric-sql/pglite"
 
-type PGliteConnectCallback = (
-  error: unknown,
-  client: PGlitePool | null,
-  done: () => void
-) => void
+type PGliteConnectCallback = (error: unknown, client: PGlitePool | null, done: () => void) => void
 
-type PGliteQueryCallback = (
-  error: unknown,
-  result: { rows: any[] } | null
-) => void
+type PGliteQueryCallback = (error: unknown, result: { rows: any[] } | null) => void
 
 let pgliteInstance: Promise<PGlite> | null = null
 

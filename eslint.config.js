@@ -1,7 +1,8 @@
 import tseslint from "typescript-eslint"
 import eslintConfigPrettier from "eslint-config-prettier"
+import { defineConfig } from "eslint/config"
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: ["dist/", "node_modules/", ".commandcode/"]
   },
@@ -76,7 +77,8 @@ export default tseslint.config(
       "@typescript-eslint/no-unnecessary-type-conversion": "error",
       "@typescript-eslint/no-unsafe-declaration-merging": "error",
       "@typescript-eslint/no-unsafe-enum-comparison": "error",
-      "@typescript-eslint/no-unsafe-function-type": "error"
+      "@typescript-eslint/no-unsafe-function-type": "error",
+      "object-shorthand": ["error", "always"]
     }
   },
   eslintConfigPrettier

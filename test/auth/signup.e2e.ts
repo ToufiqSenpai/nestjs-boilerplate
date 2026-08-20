@@ -90,9 +90,7 @@ describe("POST /api/auth/sign-up/email", () => {
     expect(dup.body.user.email).toBe(credentials.email.toLowerCase())
     // Synthetic user — id differs from the real user, but no new DB row is created
     expect(dup.body.user.id).not.toBe(first.body.user.id)
-    const count = await dataSource
-      .getRepository(User)
-      .countBy({ email: credentials.email.toLowerCase() })
+    const count = await dataSource.getRepository(User).countBy({ email: credentials.email.toLowerCase() })
     expect(count).toBe(1)
   })
 
@@ -124,10 +122,7 @@ describe("POST /api/auth/sign-up/email", () => {
     const token = new URL(verificationUrl).searchParams.get("token")
     expect(token).toBeTruthy()
 
-    const res = await request(app.getHttpServer())
-      .get("/api/auth/verify-email")
-      .query({ token })
-      .expect(200)
+    const res = await request(app.getHttpServer()).get("/api/auth/verify-email").query({ token }).expect(200)
 
     // better-auth returns { status: true, user: null } after a successful
     // verification (the updated user is not echoed back)

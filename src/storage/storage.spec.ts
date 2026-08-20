@@ -110,7 +110,15 @@ describe("Storage", () => {
       let abortFn!: () => Promise<void>
       vi.mocked(Upload).mockImplementationOnce(function () {
         const done = vi.fn().mockImplementation(async function (this: { abort: () => Promise<void> }) {
-          await new Promise<void>(resolve => { abort.signal.addEventListener("abort", () => { resolve(); }, { once: true }); })
+          await new Promise<void>(resolve => {
+            abort.signal.addEventListener(
+              "abort",
+              () => {
+                resolve()
+              },
+              { once: true }
+            )
+          })
           throw new Error("Upload aborted")
         })
         const inst = { done, abort: vi.fn().mockResolvedValue(undefined) } as unknown as InstanceType<typeof Upload>
@@ -139,7 +147,9 @@ describe("Storage", () => {
         } as unknown as InstanceType<typeof Upload>
       })
 
-      await expect(storage.upload({ key: new StorageKey("avatars", "a.png"), stream, signal: abort.signal })).rejects.toThrow("Upload aborted")
+      await expect(
+        storage.upload({ key: new StorageKey("avatars", "a.png"), stream, signal: abort.signal })
+      ).rejects.toThrow("Upload aborted")
       expect(uploadAbort).toHaveBeenCalled()
     })
   })
@@ -254,17 +264,15 @@ describe("Storage", () => {
   describe("copy", () => {
     it("should copy an object and return metadata of the destination", async () => {
       const lastModified = new Date("2026-01-01T00:00:00Z")
-      mocks.send
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({
-          ContentLength: 123,
-          ContentType: "image/png",
-          ContentEncoding: "gzip",
-          ContentLanguage: "en",
-          ContentDisposition: "inline",
-          LastModified: lastModified,
-          Metadata: { foo: "bar" }
-        })
+      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({
+        ContentLength: 123,
+        ContentType: "image/png",
+        ContentEncoding: "gzip",
+        ContentLanguage: "en",
+        ContentDisposition: "inline",
+        LastModified: lastModified,
+        Metadata: { foo: "bar" }
+      })
 
       const result = await storage.copy({
         source: new StorageKey("avatars", "a.png"),
@@ -289,14 +297,12 @@ describe("Storage", () => {
     })
 
     it("should apply headers with MetadataDirective REPLACE when provided", async () => {
-      mocks.send
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({
-          ContentLength: 10,
-          ContentType: "image/webp",
-          LastModified: new Date("2026-01-01T00:00:00Z"),
-          Metadata: { foo: "bar" }
-        })
+      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({
+        ContentLength: 10,
+        ContentType: "image/webp",
+        LastModified: new Date("2026-01-01T00:00:00Z"),
+        Metadata: { foo: "bar" }
+      })
 
       const result = await storage.copy({
         source: new StorageKey("avatars", "a.png"),
@@ -308,7 +314,16 @@ describe("Storage", () => {
         }
       })
 
-      const [copyCommand] = mocks.send.mock.calls[0] as [{ input: { MetadataDirective?: string; ContentType?: string; CacheControl?: string; Metadata?: Record<string, string> } }]
+      const [copyCommand] = mocks.send.mock.calls[0] as [
+        {
+          input: {
+            MetadataDirective?: string
+            ContentType?: string
+            CacheControl?: string
+            Metadata?: Record<string, string>
+          }
+        }
+      ]
       expect(copyCommand.input.MetadataDirective).toBe("REPLACE")
       expect(copyCommand.input.ContentType).toBe("image/webp")
       expect(copyCommand.input.CacheControl).toBe("public, max-age=3600")
@@ -318,9 +333,7 @@ describe("Storage", () => {
     })
 
     it("should omit MetadataDirective when no headers provided", async () => {
-      mocks.send
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ ContentLength: 1 })
+      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({ ContentLength: 1 })
 
       await storage.copy({
         source: new StorageKey("avatars", "a.png"),
@@ -332,9 +345,7 @@ describe("Storage", () => {
     })
 
     it("should use sanitized keys for source and destination", async () => {
-      mocks.send
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ ContentLength: 1 })
+      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({ ContentLength: 1 })
 
       await storage.copy({
         source: new StorageKey("avatars", "../evil.png"),

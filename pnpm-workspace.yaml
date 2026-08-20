@@ -1,7 +1,7 @@
 allowBuilds:
-  '@nestjs/core': false
-  '@parcel/watcher': true
-  '@scarf/scarf': false
-  '@swc/core': true
+  "@nestjs/core": false
+  "@parcel/watcher": true
+  "@scarf/scarf": false
+  "@swc/core": true
   better-sqlite3: true
   esbuild: true

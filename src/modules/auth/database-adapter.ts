@@ -141,9 +141,7 @@ export function createDatabaseAdapter(dataSource: DataSource) {
     alias: string,
     select?: string[]
   ): void {
-    const columns = select?.length
-      ? select.map(c => getColumn(entity, c))
-      : dataSource.getMetadata(entity).columns
+    const columns = select?.length ? select.map(c => getColumn(entity, c)) : dataSource.getMetadata(entity).columns
     qb.select(columns.map(c => `${alias}.${c.databaseName}`))
   }
 

@@ -7,9 +7,7 @@ interface FileSchemaOptions {
 }
 
 export function createFileSchema({ mimetype, maxSize, collection }: FileSchemaOptions) {
-  const mimetypeSchema = mimetype && mimetype.length > 0
-      ? z.enum(mimetype as [string, ...string[]])
-      : z.string();
+  const mimetypeSchema = mimetype && mimetype.length > 0 ? z.enum(mimetype as [string, ...string[]]) : z.string()
 
   return z
     .object({

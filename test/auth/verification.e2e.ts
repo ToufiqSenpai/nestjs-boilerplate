@@ -39,7 +39,10 @@ describe("GET /api/auth/verify-email", () => {
     createdUserIds.push(signUpRes.body.user.id)
     const token = extractVerificationToken()!
     const verRepo = dataSource.getRepository(Verification)
-    const ver = await verRepo.createQueryBuilder("verification").where("verification.value = :value", { value: token }).getOne()
+    const ver = await verRepo
+      .createQueryBuilder("verification")
+      .where("verification.value = :value", { value: token })
+      .getOne()
     if (ver) {
       await verRepo.update({ id: ver.id }, { expiresAt: new Date(Date.now() - 60_000) })
       const res = await request(app.getHttpServer()).get("/api/auth/verify-email").query({ token })
@@ -47,7 +50,9 @@ describe("GET /api/auth/verify-email", () => {
       const dbUser = await dataSource.getRepository(User).findOneBy({ id: signUpRes.body.user.id })
       expect(dbUser?.emailVerified).toBe(false)
     } else {
-      const res = await request(app.getHttpServer()).get("/api/auth/verify-email").query({ token: "expired-token-stub" })
+      const res = await request(app.getHttpServer())
+        .get("/api/auth/verify-email")
+        .query({ token: "expired-token-stub" })
       expect([400, 401]).toContain(res.status)
     }
   })
@@ -80,7 +85,10 @@ describe("POST /api/auth/send-verification-email", () => {
   })
 
   it("returns 400 for an invalid email", async () => {
-    await request(app.getHttpServer()).post("/api/auth/send-verification-email").send({ email: "not-an-email" }).expect(400)
+    await request(app.getHttpServer())
+      .post("/api/auth/send-verification-email")
+      .send({ email: "not-an-email" })
+      .expect(400)
   })
 
   it("returns 400 for a missing email", async () => {

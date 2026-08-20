@@ -4,7 +4,14 @@ import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
 import { User } from "../../src/modules/auth/entities/user.entity.js"
 import { EmailService } from "../../src/email/email.service.js"
-import { createCredentials, signUp, signIn, getAuthCookie, extractVerificationToken, extractResetToken } from "./helpers.js"
+import {
+  createCredentials,
+  signUp,
+  signIn,
+  getAuthCookie,
+  extractVerificationToken,
+  extractResetToken
+} from "./helpers.js"
 
 let dataSource: DataSource
 let emailService: EmailService
@@ -71,11 +78,17 @@ describe("POST /api/auth/reset-password", () => {
       return
     }
     const newPassword = createCredentials().password
-    const resetRes = await request(app.getHttpServer()).post("/api/auth/reset-password").send({ newPassword, token }).expect(200)
+    const resetRes = await request(app.getHttpServer())
+      .post("/api/auth/reset-password")
+      .send({ newPassword, token })
+      .expect(200)
     expect(resetRes.body.status).toBe(true)
     await signIn({ email: credentials.email, password: credentials.password }).expect(401)
     await signIn({ email: credentials.email, password: newPassword }).expect(200)
-    const sessionAfter = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", oldCookie).expect(200)
+    const sessionAfter = await request(app.getHttpServer())
+      .get("/api/auth/get-session")
+      .set("Cookie", oldCookie)
+      .expect(200)
     expect(sessionAfter.body).toBeNull()
     credentials.password = newPassword
   })
@@ -125,7 +138,10 @@ describe("POST /api/auth/change-password", () => {
     expect(res.body.user).toBeDefined()
     await signIn({ email: credentials.email, password: newPassword }).expect(200)
     await signIn({ email: credentials.email, password: credentials.password }).expect(401)
-    const otherSession = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", cookie2).expect(200)
+    const otherSession = await request(app.getHttpServer())
+      .get("/api/auth/get-session")
+      .set("Cookie", cookie2)
+      .expect(200)
     expect(otherSession.body).toBeNull()
   })
 

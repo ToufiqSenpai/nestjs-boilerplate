@@ -34,9 +34,7 @@ export function withCookie(req: request.Test, cookie: string): request.Test {
 
 export function extractVerificationUrl(): string | null {
   const calls = vi.mocked(app.get(EmailService).send).mock.calls
-  const match = [...calls]
-    .reverse()
-    .find(c => (c[0] as { template: string }).template === "verification")
+  const match = [...calls].reverse().find(c => (c[0] as { template: string }).template === "verification")
   if (!match) return null
   return (match[0] as { props: { verificationUrl: string } }).props.verificationUrl
 }
@@ -53,9 +51,7 @@ export function extractVerificationToken(): string | null {
 
 export function extractResetUrl(): string | null {
   const calls = vi.mocked(app.get(EmailService).send).mock.calls
-  const match = [...calls]
-    .reverse()
-    .find(c => (c[0] as { template: string }).template === "reset-password")
+  const match = [...calls].reverse().find(c => (c[0] as { template: string }).template === "reset-password")
   if (!match) return null
   return (match[0] as { props: { resetUrl: string } }).props.resetUrl
 }

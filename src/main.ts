@@ -80,5 +80,4 @@ const mainPath = fileURLToPath(import.meta.url)
 const entryPath = process.argv[1] ? resolve(process.argv[1]) : ""
 if (entryPath === mainPath || `${entryPath}.js` === mainPath) {
   await app.listen(config.app.port)
-}
-else await app.init()
+} else await app.init()

@@ -121,7 +121,10 @@ describe("FormInterceptor", () => {
     expect(result).toEqual({ ok: true })
     expect((req as unknown as { body: unknown }).body).toBeDefined()
     expect(storage.upload).toHaveBeenCalledOnce()
-    const uploadArg = vi.mocked(storage.upload).mock.calls[0][0] as { key: StorageKey; headers: { contentType: string } }
+    const uploadArg = vi.mocked(storage.upload).mock.calls[0][0] as {
+      key: StorageKey
+      headers: { contentType: string }
+    }
     expect(uploadArg.key).toBeInstanceOf(StorageKey)
     expect(uploadArg.key.collection).toBe("avatars")
     expect(uploadArg.headers.contentType).toBe("image/png")

@@ -11,25 +11,23 @@ declare global {
   }
 }
 
-export const Abort = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): AbortController => {
-    const req = ctx.switchToHttp().getRequest<Request>()
-    const existing = req[ABORT_TOKEN]
+export const Abort = createParamDecorator((_data: unknown, ctx: ExecutionContext): AbortController => {
+  const req = ctx.switchToHttp().getRequest<Request>()
+  const existing = req[ABORT_TOKEN]
 
-    if (existing) return existing
+  if (existing) return existing
 
-    const controller = new AbortController()
-    req[ABORT_TOKEN] = controller
+  const controller = new AbortController()
+  req[ABORT_TOKEN] = controller
 
-    req.once("error", (err: Error) => {
-      if (!controller.signal.aborted) controller.abort(err)
-    })
-    req.once("close", () => {
-      if (controller.signal.aborted) return
-      const premature = req.complete === false || !!req.destroyed || req.readableEnded === false
-      if (premature) controller.abort(new DOMException("Request aborted by client", "AbortError"))
-    })
+  req.once("error", (err: Error) => {
+    if (!controller.signal.aborted) controller.abort(err)
+  })
+  req.once("close", () => {
+    if (controller.signal.aborted) return
+    const premature = req.complete === false || !!req.destroyed || req.readableEnded === false
+    if (premature) controller.abort(new DOMException("Request aborted by client", "AbortError"))
+  })
 
-    return controller
-  }
-)
+  return controller
+})

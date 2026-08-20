@@ -4,11 +4,7 @@ import { Logger } from "@nestjs/common"
 export class DatabaseLogger implements TypeOrmLogger {
   private readonly logger = new Logger(DatabaseLogger.name)
 
-  public logQuery(
-    query: string,
-    _parameters?: unknown[] | Record<string, unknown>,
-    _queryRunner?: QueryRunner
-  ): void {
+  public logQuery(query: string, _parameters?: unknown[] | Record<string, unknown>, _queryRunner?: QueryRunner): void {
     this.logger.debug({ query }, "Query executed")
   }
 
@@ -18,10 +14,7 @@ export class DatabaseLogger implements TypeOrmLogger {
     _parameters?: unknown[] | Record<string, unknown>,
     _queryRunner?: QueryRunner
   ): void {
-    this.logger.error(
-      { query, error: error instanceof Error ? error.message : error },
-      "Query failed"
-    )
+    this.logger.error({ query, error: error instanceof Error ? error.message : error }, "Query failed")
   }
 
   public logQuerySlow(

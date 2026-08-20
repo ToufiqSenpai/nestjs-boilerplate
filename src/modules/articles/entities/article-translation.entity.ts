@@ -1,8 +1,8 @@
-import { Column, Entity, JoinColumn, ManyToOne, Unique } from "typeorm";
-import { BaseEntity } from "../../../database/base.entity.js";
-import { DEFAULT_LOCALE } from "../../../i18n/index.js";
-import type { Locale } from "../../../i18n/index.js";
-import { Article } from "./article.entity.js";
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from "typeorm"
+import { BaseEntity } from "../../../database/base.entity.js"
+import { DEFAULT_LOCALE } from "../../../i18n/index.js"
+import type { Locale } from "../../../i18n/index.js"
+import { Article } from "./article.entity.js"
 
 @Entity({ name: "article_translation" })
 @Unique(["articleId", "locale"])
