@@ -76,7 +76,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unnecessary-type-conversion": "error",
       "@typescript-eslint/no-unsafe-declaration-merging": "error",
       "@typescript-eslint/no-unsafe-enum-comparison": "error",
-      "@typescript-eslint/no-unsafe-function-type": "error",
+      "@typescript-eslint/no-unsafe-function-type": "error"
     }
   },
   eslintConfigPrettier

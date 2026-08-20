@@ -71,7 +71,7 @@ describe("POST /api/auth/update-user", () => {
     const res = await request(app.getHttpServer()).post("/api/auth/update-user").set("Cookie", cookie).send({ name: newName })
     expect(res.status).toBe(200)
     const bodyUser = (res.body as { user?: { name: string } }).user ?? (res.body as { name: string })
-    const updatedName = (bodyUser as { name: string }).name ?? newName
+    const updatedName = (bodyUser).name ?? newName
     expect(updatedName).toBe(newName)
     const session = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", cookie).expect(200)
     expect(session.body.user.name).toBe(newName)

@@ -4,7 +4,7 @@ import { CreateEmailOptions, Resend } from "resend"
 import { createElement, type ComponentProps, type FunctionComponent } from "react"
 import { randomUUID } from "crypto"
 import { EMAIL_TEMPLATES, type EmailTemplateName } from "./templates/index.js"
-import { getTranslator, type Locale } from "../i18n/index.js"
+import { DEFAULT_LOCALE, getTranslator, type Locale } from "../i18n/index.js"
 import { config } from "../config/index.js"
 
 interface SendEmailParams<T extends EmailTemplateName> {
@@ -30,7 +30,7 @@ export class EmailService {
     to,
     template,
     props,
-    locale,
+    locale = DEFAULT_LOCALE.locale,
     idempotencyKey,
     emailType = template,
     userId
@@ -69,7 +69,7 @@ export class EmailService {
             event: "email-sent",
             emailType,
             userId,
-            messageId: data?.id
+            messageId: data.id
           },
           "Email sent"
         )

@@ -57,7 +57,7 @@ describe("POST /api/auth/revoke-session", () => {
     const r2 = await signIn({ email: credentials.email, password: credentials.password }).expect(200)
     const cookie1 = getAuthCookie(r1)
     const cookie2 = getAuthCookie(r2)
-    const token1 = (r1.body.token as string) ?? ""
+    const token1 = (r1.body.token as string | undefined) ?? ""
     expect(token1).toBeTruthy()
     const listBefore = await request(app.getHttpServer()).get("/api/auth/list-sessions").set("Cookie", cookie1).expect(200)
     expect(listBefore.body.length).toBeGreaterThanOrEqual(2)

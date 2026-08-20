@@ -45,7 +45,7 @@ if (config.app.environment === "development") {
   for (const [key, path] of Object.entries(authSchema.paths)) {
     for (const operation of Object.values(path)) {
       if (Array.isArray(operation.tags)) {
-        operation.tags = operation.tags.map(tag => (tag === "Default" ? "Auth" : tag))
+        operation.tags = operation.tags.map((tag: string) => (tag === "Default" ? "Auth" : tag))
       }
     }
 

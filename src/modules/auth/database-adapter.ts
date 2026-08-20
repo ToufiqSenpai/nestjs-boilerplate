@@ -49,8 +49,8 @@ export function createDatabaseAdapter(dataSource: DataSource) {
       // column directly (quoted) instead of "<alias>.<column>".
       const col = useAlias ? `${alias}.${column.databaseName}` : `"${column.databaseName}"`
       const param = `p${i}`
-      const op = w.operator ?? "eq"
-      const mode = w.mode ?? "sensitive"
+      const op = w.operator
+      const mode = w.mode
       let sql: string
       let value: unknown = w.value
 
@@ -94,7 +94,7 @@ export function createDatabaseAdapter(dataSource: DataSource) {
         case "contains":
         case "starts_with":
         case "ends_with": {
-          let pattern = String(value as string)
+          let pattern = String(value)
           if (op === "contains") pattern = `%${pattern}%`
           else if (op === "starts_with") pattern = `${pattern}%`
           else pattern = `%${pattern}`
@@ -119,7 +119,7 @@ export function createDatabaseAdapter(dataSource: DataSource) {
       }
 
       const params = { [param]: value }
-      if (i === 0 || w.connector === "AND" || w.connector === undefined) {
+      if (i === 0 || w.connector === "AND") {
         qb.andWhere(sql, params)
       } else {
         qb.orWhere(sql, params)
@@ -176,7 +176,13 @@ export function createDatabaseAdapter(dataSource: DataSource) {
             if (rows.length === 0) return null
             const ids = rows.map(row => row.id)
 
-            const updateQb = manager.createQueryBuilder().update(entity).set(update)
+            const setStatements: Record<string, unknown> = {}
+            for (const [field, value] of Object.entries(update as Record<string, any>)) {
+              const column = getColumn(entity, field)
+              setStatements[column.propertyName] = value
+            }
+
+            const updateQb = manager.createQueryBuilder().update(entity).set(setStatements)
             applyWhere(updateQb, entity, alias, where, false)
             await updateQb.execute()
 
@@ -208,7 +214,7 @@ export function createDatabaseAdapter(dataSource: DataSource) {
           const qb = dataSource.createQueryBuilder().from(entity, alias)
           selectColumns(qb, entity, alias, select)
           applyWhere(qb, entity, alias, where)
-          if (limit != null) qb.take(limit)
+          qb.take(limit)
           if (offset != null) qb.skip(offset)
           if (sortBy) {
             const column = getColumn(entity, sortBy.field)
@@ -259,15 +265,14 @@ export function createDatabaseAdapter(dataSource: DataSource) {
                 setStatements[column.propertyName] = value
               }
             }
-            if (increment) {
-              for (const [field, value] of Object.entries(increment)) {
-                const column = getColumn(entity, field)
-                if (setStatements[column.propertyName] !== undefined) continue
-                setStatements[column.propertyName] = () => `${column.databaseName} + :inc_${field}`
-                params[`inc_${field}`] = value
-              }
+
+            for (const [field, value] of Object.entries(increment)) {
+              const column = getColumn(entity, field)
+              if (setStatements[column.propertyName] !== undefined) continue
+              setStatements[column.propertyName] = () => `${column.databaseName} + :inc_${field}`
+              params[`inc_${field}`] = value
             }
-            updateQb.set(setStatements as any).setParameters(params)
+            updateQb.set(setStatements).setParameters(params)
             updateQb.where(`${alias}.${pk} IN (:...ids)`, { ids })
             await updateQb.execute()
 

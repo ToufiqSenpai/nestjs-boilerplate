@@ -20,7 +20,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse()
       if (typeof res === "string") {
         body = { message: res }
-      } else if (res !== null && typeof res === "object") {
+      } else if (typeof res === "object") {
         body = { ...res, message: exception.message }
       } else {
         body = { message: exception.message }

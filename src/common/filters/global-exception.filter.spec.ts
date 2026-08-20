@@ -73,7 +73,7 @@ describe("GlobalExceptionFilter", () => {
     const exception = new BadRequestException({
       message: "Validation failed",
       errors: [{ path: "email", message: "invalid" }]
-    } as never)
+    })
 
     filter.catch(exception, host)
 
@@ -118,7 +118,7 @@ describe("GlobalExceptionFilter", () => {
   it("should handle non-Error throw", () => {
     const { host, json, status } = createHost()
 
-    filter.catch("string" as unknown as Error, host)
+    filter.catch("string", host)
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR)
     expect(json).toHaveBeenCalledWith({ message: "Internal server error" })
@@ -127,7 +127,7 @@ describe("GlobalExceptionFilter", () => {
   it("should handle null throw", () => {
     const { host, json, status } = createHost()
 
-    filter.catch(null as unknown as Error, host)
+    filter.catch(null, host)
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR)
     expect(json).toHaveBeenCalledWith({ message: "Internal server error" })

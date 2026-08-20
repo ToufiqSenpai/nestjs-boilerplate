@@ -7,7 +7,7 @@ import { createFileSchema } from "../../libs/form/file.schema.js";
 const articleSchema = z.object({
   title: z.string().min(1).max(64),
   content: z.string(),
-  coverImage: createFileSchema({ mimetype: [], collection: "articles", maxSize: 5 * 1024 * 1024 })
+  coverImage: createFileSchema({ mimetype: ["image/jpeg", "image/png"], collection: "articles", maxSize: 5 * 1024 * 1024 })
 })
 
 @Controller("articles")

@@ -119,7 +119,7 @@ export const config = configSchema.parse({
   }
 })
 
-function defaultEnvironment<T = unknown>(values: Partial<Record<Environment, T>>): T {
+function defaultEnvironment<T = unknown>(values: Partial<Record<Environment, T>>): T | undefined {
   const parsed = environmentSchema.safeParse(process.env.NODE_ENV)
   const env = parsed.success ? parsed.data : "development"
 

@@ -45,7 +45,7 @@ export class UnitOfWork {
    * - `REQUIRES_NEW`: always start a new (independent) transaction.
    * - `MANDATORY`: must run inside an existing transaction, otherwise throw.
    */
-  public async transaction<T>(callback: () => Promise<T>, options: TransactionOptions = {}): Promise<T> {
+  public async transaction<T>(callback: () => Promise<T> | T, options: TransactionOptions = {}): Promise<T> {
     const { propagation = "REQUIRED" } = options
     const activeManager = this.getContext()
 

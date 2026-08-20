@@ -9,6 +9,10 @@ vi.mock("../../config/index.js", () => ({
   config: { s3: { bucket: "test-bucket" } }
 }))
 
+vi.mock("file-type", () => ({
+  fileTypeFromBuffer: vi.fn().mockResolvedValue({ mime: "image/png", ext: "png" })
+}))
+
 vi.mock("@fastify/busboy", () => ({
   Busboy: vi.fn()
 }))
@@ -38,9 +42,9 @@ function makeCtx(req: unknown, schema: z.ZodType): ExecutionContext {
   const key = `${RouteParamtypes.BODY}:0`
   vi.spyOn(Reflect, "getMetadata").mockImplementation((metadataKey: unknown) => {
     if (metadataKey === ROUTE_ARGS_METADATA) {
-      return { [key]: { index: 0, data: undefined, pipes: [], schema } } as unknown as ReturnType<typeof Reflect.getMetadata>
+      return { [key]: { index: 0, data: undefined, pipes: [], schema } }
     }
-    return undefined as unknown as ReturnType<typeof Reflect.getMetadata>
+    return undefined
   })
   return {
     switchToHttp: () => ({ getRequest: () => req as import("express").Request }),
@@ -61,8 +65,17 @@ describe("FormInterceptor", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storage = {
-      upload: vi.fn().mockResolvedValue({ key: "avatars/test.png", size: 5, contentType: "image/png", metadata: {} }),
-      delete: vi.fn().mockResolvedValue(undefined)
+      upload: vi.fn().mockImplementation(async ({ stream }: { stream: NodeJS.ReadableStream }) => {
+        // The real Storage.upload consumes the stream (via the AWS SDK), which
+        // drives the validation stream's flush phase. Without draining here,
+        // file type detection never runs and the upload hangs.
+        for await (const _ of stream as AsyncIterable<Buffer>) {
+          // drain
+        }
+        return { key: "avatars/test.png", size: 5, contentType: "image/png", metadata: {} }
+      }),
+      delete: vi.fn().mockResolvedValue(undefined),
+      copy: vi.fn().mockResolvedValue({ key: "avatars/test.png", size: 5, contentType: "image/png", metadata: {} })
     } as unknown as Storage
     interceptor = new FormInterceptor(storage)
   })
@@ -78,7 +91,7 @@ describe("FormInterceptor", () => {
       switchToWs: () => null as unknown as ReturnType<ExecutionContext["switchToWs"]>,
       getType: () => "http"
     } as unknown as ExecutionContext
-    vi.spyOn(Reflect, "getMetadata").mockReturnValue({} as unknown as ReturnType<typeof Reflect.getMetadata>)
+    vi.spyOn(Reflect, "getMetadata").mockReturnValue({})
 
     const next: CallHandler = { handle: () => of({}) }
     await expect(interceptor.intercept(ctx, next)).rejects.toThrow("Missing form schema")
@@ -98,7 +111,7 @@ describe("FormInterceptor", () => {
     setImmediate(() => {
       busboy.emit("field", "title", "hello")
       const fileStream = new PassThrough()
-      busboy.emit("file", "avatar", fileStream as unknown as NodeJS.ReadableStream, "a.png", "7bit", "image/png")
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "image/png")
       fileStream.end("hello")
       setImmediate(() => busboy.emit("finish"))
     })
@@ -112,6 +125,87 @@ describe("FormInterceptor", () => {
     expect(uploadArg.key).toBeInstanceOf(StorageKey)
     expect(uploadArg.key.collection).toBe("avatars")
     expect(uploadArg.headers.contentType).toBe("image/png")
+  })
+
+  it("should copy object to override contentType when detected mime differs from multipart header", async () => {
+    const fileSchema = createFileSchema({ mimetype: ["image/png"], maxSize: 1024 * 1024, collection: "avatars" })
+    const schema = z.object({ avatar: fileSchema })
+
+    const busboy = makeBusboy()
+    const req = makeReq(busboy) as unknown as import("express").Request
+    const ctx = makeCtx(req, schema)
+    const next: CallHandler = { handle: () => of({}) }
+
+    const promise = interceptor.intercept(ctx, next)
+
+    setImmediate(() => {
+      const fileStream = new PassThrough()
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "application/octet-stream")
+      fileStream.end("hello")
+      setImmediate(() => busboy.emit("finish"))
+    })
+
+    const obs = await promise
+    await lastValueFrom(obs)
+    expect(storage.copy).toHaveBeenCalledOnce()
+    const copyArg = vi.mocked(storage.copy).mock.calls[0][0] as {
+      source: StorageKey
+      destination: StorageKey
+      headers: { contentType: string }
+    }
+    expect(copyArg.source).toBeInstanceOf(StorageKey)
+    expect(copyArg.destination).toBeInstanceOf(StorageKey)
+    expect(copyArg.source.toString()).toBe(copyArg.destination.toString())
+    expect(copyArg.source.toString()).toBe("avatars/test.png")
+    expect(copyArg.headers.contentType).toBe("image/png")
+    const body = (req as unknown as { body: { avatar: { mimetype: string } } }).body
+    expect(body.avatar.mimetype).toBe("image/png")
+  })
+
+  it("should not copy when multipart mime already matches detected mime", async () => {
+    const fileSchema = createFileSchema({ mimetype: ["image/png"], maxSize: 1024 * 1024, collection: "avatars" })
+    const schema = z.object({ avatar: fileSchema })
+
+    const busboy = makeBusboy()
+    const req = makeReq(busboy) as unknown as import("express").Request
+    const ctx = makeCtx(req, schema)
+    const next: CallHandler = { handle: () => of({}) }
+
+    const promise = interceptor.intercept(ctx, next)
+
+    setImmediate(() => {
+      const fileStream = new PassThrough()
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "image/png")
+      fileStream.end("hello")
+      setImmediate(() => busboy.emit("finish"))
+    })
+
+    const obs = await promise
+    await lastValueFrom(obs)
+    expect(storage.copy).not.toHaveBeenCalled()
+  })
+
+  it("should not copy when schema has no mime validator", async () => {
+    const fileSchema = createFileSchema({ collection: "avatars", mimetype: z.string() })
+    const schema = z.object({ avatar: fileSchema })
+
+    const busboy = makeBusboy()
+    const req = makeReq(busboy) as unknown as import("express").Request
+    const ctx = makeCtx(req, schema)
+    const next: CallHandler = { handle: () => of({}) }
+
+    const promise = interceptor.intercept(ctx, next)
+
+    setImmediate(() => {
+      const fileStream = new PassThrough()
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "application/octet-stream")
+      fileStream.end("hello")
+      setImmediate(() => busboy.emit("finish"))
+    })
+
+    const obs = await promise
+    await lastValueFrom(obs)
+    expect(storage.copy).not.toHaveBeenCalled()
   })
 
   it("should rollback on schema parse failure and throw", async () => {
@@ -128,7 +222,7 @@ describe("FormInterceptor", () => {
     setImmediate(() => {
       busboy.emit("field", "title", "hi")
       const fileStream = new PassThrough()
-      busboy.emit("file", "avatar", fileStream as unknown as NodeJS.ReadableStream, "a.png", "7bit", "image/png")
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "image/png")
       fileStream.end("hello")
       setImmediate(() => busboy.emit("finish"))
     })
@@ -151,7 +245,7 @@ describe("FormInterceptor", () => {
 
     setImmediate(() => {
       const fileStream = new PassThrough()
-      busboy.emit("file", "avatar", fileStream as unknown as NodeJS.ReadableStream, "a.png", "7bit", "image/png")
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "image/png")
       fileStream.end("hello")
       setImmediate(() => busboy.emit("finish"))
     })
@@ -197,13 +291,13 @@ describe("FormInterceptor", () => {
       for await (const _ of stream as AsyncIterable<Buffer>) {
       }
       return { key: "avatars/test.png", size: 6, contentType: "image/png", metadata: {} }
-    }) as unknown as typeof storage.upload
+    })
 
     const promise = interceptor.intercept(ctx, next)
 
     setImmediate(() => {
       const fileStream = new PassThrough()
-      busboy.emit("file", "avatar", fileStream as unknown as NodeJS.ReadableStream, "a.png", "7bit", "image/png")
+      busboy.emit("file", "avatar", fileStream, "a.png", "7bit", "image/png")
       fileStream.write(Buffer.alloc(3, "a"))
       fileStream.write(Buffer.alloc(3, "a"))
       fileStream.end()
@@ -224,8 +318,18 @@ describe("FormInterceptor", () => {
     const next: CallHandler = { handle: () => of({}) }
 
     vi.mocked(storage.upload)
-      .mockResolvedValueOnce({ key: "avatars/a.png", size: 2 } as unknown as Awaited<ReturnType<Storage["upload"]>>)
-      .mockResolvedValueOnce({ key: "avatars/b.png", size: 2 } as unknown as Awaited<ReturnType<Storage["upload"]>>)
+      .mockImplementationOnce(async ({ stream }: { stream: NodeJS.ReadableStream }) => {
+        for await (const _ of stream as AsyncIterable<Buffer>) {
+          // drain
+        }
+        return { key: "avatars/a.png", size: 2 }
+      })
+      .mockImplementationOnce(async ({ stream }: { stream: NodeJS.ReadableStream }) => {
+        for await (const _ of stream as AsyncIterable<Buffer>) {
+          // drain
+        }
+        return { key: "avatars/b.png", size: 2 }
+      })
 
     const promise = interceptor.intercept(ctx, next)
 
@@ -233,8 +337,8 @@ describe("FormInterceptor", () => {
       busboy.emit("field", "title", "hello")
       const s1 = new PassThrough()
       const s2 = new PassThrough()
-      busboy.emit("file", "avatars", s1 as unknown as NodeJS.ReadableStream, "a.png", "7bit", "image/png")
-      busboy.emit("file", "avatars", s2 as unknown as NodeJS.ReadableStream, "b.png", "7bit", "image/png")
+      busboy.emit("file", "avatars", s1, "a.png", "7bit", "image/png")
+      busboy.emit("file", "avatars", s2, "b.png", "7bit", "image/png")
       s1.end("hi")
       s2.end("hi")
       setImmediate(() => busboy.emit("finish"))

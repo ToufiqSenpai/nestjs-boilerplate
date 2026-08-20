@@ -41,7 +41,7 @@ describe("GET /api/auth/verify-email", () => {
     const verRepo = dataSource.getRepository(Verification)
     const ver = await verRepo.createQueryBuilder("verification").where("verification.value = :value", { value: token }).getOne()
     if (ver) {
-      await verRepo.update({ id: ver.id } as any, { expiresAt: new Date(Date.now() - 60_000) } as any)
+      await verRepo.update({ id: ver.id }, { expiresAt: new Date(Date.now() - 60_000) })
       const res = await request(app.getHttpServer()).get("/api/auth/verify-email").query({ token })
       expect([400, 401]).toContain(res.status)
       const dbUser = await dataSource.getRepository(User).findOneBy({ id: signUpRes.body.user.id })

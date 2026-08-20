@@ -1,6 +1,5 @@
-import type { Duplex } from "stream"
+import { Duplex } from "stream"
 import type { StreamValidator } from "./stream-validator.js"
-import { compose } from "stream"
 import { StreamValidationException } from "./stream-validation.exception.js"
 
 export class StreamValidation<T = unknown> {
@@ -11,7 +10,7 @@ export class StreamValidation<T = unknown> {
   }
 
   public get stream(): Duplex {
-    return compose(this.run.bind(this))
+    return Duplex.from(this.run.bind(this))
   }
 
   private async *run(source: AsyncIterable<T>): AsyncGenerator<T> {

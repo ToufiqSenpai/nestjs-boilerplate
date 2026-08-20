@@ -7,10 +7,11 @@ import {
   Logger,
   NestInterceptor,
   ParameterDecoratorOptions,
-  PayloadTooLargeException
+  PayloadTooLargeException,
+  UnsupportedMediaTypeException
 } from "@nestjs/common"
 import { StreamValidation } from "../stream/stream-validation.js"
-import { SizeLimitingValidator } from "../stream/stream-validator.js"
+import { FileTypeValidator, SizeLimitingValidator } from "../stream/stream-validator.js"
 import type { StreamValidator } from "../stream/stream-validator.js"
 import { StreamValidationException } from "../stream/stream-validation.exception.js"
 import { RouteParamtypes, ROUTE_ARGS_METADATA } from "@nestjs/common/internal"
@@ -22,7 +23,7 @@ import type { FileSchemaMeta, FormFile } from "./file.schema.js"
 import type { Request } from "express"
 import { ZodArray, ZodEnum, ZodNumber, ZodObject, ZodType } from "zod"
 
-type ParsedForm = Record<string, string | string[] | FormFile | FormFile[]>
+type ParsedForm = Partial<Record<string, string | string[] | FormFile | FormFile[]>>
 
 @Injectable()
 export class FormInterceptor implements NestInterceptor {
@@ -70,7 +71,7 @@ export class FormInterceptor implements NestInterceptor {
         this.appendParsedForm(parsed, fieldname, value)
       })
 
-      bb.on("file", (fieldname, stream, filename, _encoding, mimeType) => {
+      bb.on("file", async (fieldname, stream, filename, _encoding, mimeType) => {
         this.logger.verbose(`Mimetype: ${mimeType}`)
 
         try {
@@ -79,11 +80,16 @@ export class FormInterceptor implements NestInterceptor {
             stream.resume()
             return
           }
-          const { collection, maxSize } = fileField
+          const { collection, maxSize, mime } = fileField
 
           const name = `${randomUUID()}-${filename}`
           const validators: StreamValidator<Buffer>[] = []
           if (maxSize !== undefined && maxSize != 0) validators.push(new SizeLimitingValidator(maxSize))
+          let fileTypeValidator: FileTypeValidator | undefined
+          if (mime?.length) {
+            fileTypeValidator = new FileTypeValidator(mime)
+            validators.push(fileTypeValidator)
+          }
           const validationStream = new StreamValidation<Buffer>(...validators).stream
           const abort = new AbortController()
           let rejected = false
@@ -99,6 +105,10 @@ export class FormInterceptor implements NestInterceptor {
               reject(
                 new PayloadTooLargeException({ message: `${fieldname} exceeds ${maxSize} bytes — limit ${maxSize}` })
               )
+            } else if (err instanceof StreamValidationException && err.validator instanceof FileTypeValidator) {
+              void err.validator.message().then(message => {
+                reject(new UnsupportedMediaTypeException({ message }))
+              })
             } else {
               reject(err)
             }
@@ -118,16 +128,26 @@ export class FormInterceptor implements NestInterceptor {
               headers: { contentType: mimeType },
               signal: abort.signal
             })
-            .then(result => {
+            .then(async result => {
               this.logger.verbose(`Is rejected: ${rejected}`)
 
               if (rejected) return
+
+              const finalMime = fileTypeValidator ? await fileTypeValidator.mimeType : mimeType
+
+              if (fileTypeValidator && finalMime !== mimeType) {
+                await this.storage.copy({
+                  source: new StorageKey(result.key),
+                  destination: new StorageKey(result.key),
+                  headers: { contentType: finalMime }
+                })
+              }
 
               const file: FormFile = {
                 name: result.key,
                 originalName: filename,
                 size: result.size ?? 0,
-                mimetype: mimeType
+                mimetype: finalMime
               }
 
               this.logger.verbose(file)
@@ -230,8 +250,8 @@ export class FormInterceptor implements NestInterceptor {
     this.logger.verbose(`Mime schema type: ${mimeSchema?.def.type}`)
     let mime: string[] | undefined = undefined
     if (mimeSchema && mimeSchema.def.type == "enum") mime = Object.keys((mimeSchema as ZodEnum).enum)
-    else if (mimeSchema && mimeSchema.def.type == "string") {}
-    else throw new InvalidSchemaException("File schema must contain `mimetype` with type ZodString or ZodEnum")
+    else if (mimeSchema && mimeSchema.def.type == "string") {
+    } else throw new InvalidSchemaException("File schema must contain `mimetype` with type ZodString or ZodEnum")
 
     return { collection, maxSize: (sizeSchema as ZodNumber).maxValue ?? 0, mime }
   }

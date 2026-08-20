@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -26,6 +27,12 @@ export interface UploadFileParams {
   stream: Readable
   headers?: FileHeaders
   signal?: AbortSignal
+}
+
+export interface CopyFileParams {
+  source: StorageKey
+  destination: StorageKey
+  headers?: FileHeaders
 }
 
 export interface FileMetadata {
@@ -118,6 +125,45 @@ export class Storage {
       lastModifiedAt: head.LastModified,
       size: head.ContentLength,
       metadata: head.Metadata
+    }
+  }
+
+  public async copy({ source, destination, headers }: CopyFileParams): Promise<FileMetadata> {
+    const sourceKey = source.toString()
+    const destinationKey = destination.toString()
+
+    await this.s3.send(
+      new CopyObjectCommand({
+        Bucket: config.s3.bucket,
+        CopySource: `${config.s3.bucket}/${sourceKey}`,
+        Key: destinationKey,
+        CacheControl: headers?.cacheControl,
+        ContentDisposition: headers?.contentDisposition,
+        ContentEncoding: headers?.contentEncoding,
+        ContentLanguage: headers?.contentLanguage,
+        ContentType: headers?.contentType,
+        Metadata: headers?.metadata,
+        MetadataDirective: headers ? "REPLACE" : undefined
+      })
+    )
+
+    const head = await this.s3.send(
+      new HeadObjectCommand({
+        Bucket: config.s3.bucket,
+        Key: destinationKey
+      })
+    )
+
+    return {
+      key: destinationKey,
+      contentType: headers?.contentType ?? head.ContentType,
+      contentEncoding: headers?.contentEncoding ?? head.ContentEncoding,
+      contentLanguage: headers?.contentLanguage ?? head.ContentLanguage,
+      contentDisposition: headers?.contentDisposition ?? head.ContentDisposition,
+      createdAt: undefined,
+      lastModifiedAt: head.LastModified,
+      size: head.ContentLength,
+      metadata: headers?.metadata ?? head.Metadata
     }
   }
 
