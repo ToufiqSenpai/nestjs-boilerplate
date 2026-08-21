@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest"
+import { mock } from "vitest-mock-extended"
 import { SizeLimitingValidator, FileTypeValidator } from "./stream-validator.js"
 import { StreamValidationException } from "./stream-validation.exception.js"
 import { StreamValidation } from "./stream-validation.js"
+import type { StreamValidator } from "./stream-validator.js"
 
 const PNG_HEADER = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex")
 const TEXT_BYTES = Buffer.from("plain text, not a known file type")
@@ -94,24 +95,21 @@ describe("StreamValidation", () => {
   })
 
   it("runs flush validators after the source ends", async () => {
-    const flush = vi.fn().mockResolvedValue(true)
-    const validator = {
-      validate: () => true,
-      flush,
-      message: () => "flush failed"
-    }
+    const validator = mock<StreamValidator<Buffer>>()
+    validator.validate.mockReturnValue(true)
+    validator.flush.mockResolvedValue(true)
+    validator.message.mockReturnValue("flush failed")
     const stream = new StreamValidation<Buffer>(validator).stream
     stream.end("data")
     await collect(stream)
-    expect(flush).toHaveBeenCalledTimes(1)
+    expect(validator.flush).toHaveBeenCalledTimes(1)
   })
 
   it("throws StreamValidationException when a flush validator rejects", async () => {
-    const validator = {
-      validate: () => true,
-      flush: () => false,
-      message: () => "flush rejected"
-    }
+    const validator = mock<StreamValidator<Buffer>>()
+    validator.validate.mockReturnValue(true)
+    validator.flush.mockResolvedValue(false)
+    validator.message.mockReturnValue("flush rejected")
     const stream = new StreamValidation<Buffer>(validator).stream
     stream.end("data")
     await expect(collect(stream)).rejects.toThrow(/flush rejected/)

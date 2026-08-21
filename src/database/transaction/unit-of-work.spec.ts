@@ -1,23 +1,34 @@
 import { DataSource, EntityManager, QueryRunner } from "typeorm"
 import { UnitOfWork } from "./unit-of-work.js"
 import { vi } from "vitest"
+import { mock } from "vitest-mock-extended"
+import { Test } from "@nestjs/testing"
 
 function createMocks() {
-  const dataSource = { createQueryRunner: vi.fn() } as unknown as DataSource
-  const queryRunner = {
-    manager: {} as EntityManager,
-    connect: vi.fn().mockResolvedValue(undefined),
-    startTransaction: vi.fn().mockResolvedValue(undefined),
-    commitTransaction: vi.fn().mockResolvedValue(undefined),
-    rollbackTransaction: vi.fn().mockResolvedValue(undefined),
-    release: vi.fn().mockResolvedValue(undefined)
-  } as unknown as QueryRunner
+  const mockDataSource = mock<DataSource>()
+  const mockQueryRunner = mock<QueryRunner>()
+  const mockManager = mock<EntityManager>()
+  mockQueryRunner.manager = mockManager
+  mockQueryRunner.connect.mockResolvedValue(undefined)
+  mockQueryRunner.startTransaction.mockResolvedValue(undefined)
+  mockQueryRunner.commitTransaction.mockResolvedValue(undefined)
+  mockQueryRunner.rollbackTransaction.mockResolvedValue(undefined)
+  mockQueryRunner.release.mockResolvedValue(undefined)
 
-  dataSource.createQueryRunner.mockReturnValue(queryRunner)
+  mockDataSource.createQueryRunner.mockReturnValue(mockQueryRunner)
 
-  const unitOfWork = new UnitOfWork(dataSource)
+  return { dataSource: mockDataSource, queryRunner: mockQueryRunner, manager: mockManager }
+}
 
-  return { dataSource, queryRunner, unitOfWork }
+async function createUnitOfWork(mocks: ReturnType<typeof createMocks>): Promise<{ unitOfWork: UnitOfWork; moduleRef: unknown }> {
+  const moduleRef = await Test.createTestingModule({
+    providers: [
+      UnitOfWork,
+      { provide: DataSource, useValue: mocks.dataSource }
+    ]
+  }).compile()
+  const unitOfWork = moduleRef.get(UnitOfWork)
+  return { unitOfWork, moduleRef }
 }
 
 describe("UnitOfWork", () => {
@@ -25,37 +36,41 @@ describe("UnitOfWork", () => {
     UnitOfWork.instance = null
   })
 
-  it("should expose itself through the static instance reference", () => {
-    const { unitOfWork } = createMocks()
+  it("should expose itself through the static instance reference", async () => {
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     expect(UnitOfWork.instance).toBe(unitOfWork)
   })
 
   it("should commit and return the callback result", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
 
     const result = await unitOfWork.transaction(async () => "ok")
 
     expect(result).toBe("ok")
-    expect(queryRunner.connect).toHaveBeenCalledTimes(1)
-    expect(queryRunner.startTransaction).toHaveBeenCalledTimes(1)
-    expect(queryRunner.commitTransaction).toHaveBeenCalledTimes(1)
-    expect(queryRunner.rollbackTransaction).not.toHaveBeenCalled()
-    expect(queryRunner.release).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.connect).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.startTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.commitTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.rollbackTransaction).not.toHaveBeenCalled()
+    expect(mocks.queryRunner.release).toHaveBeenCalledTimes(1)
   })
 
   it("should expose the transactional manager inside the callback", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     let seenManager: EntityManager | undefined
 
     await unitOfWork.transaction(async () => {
       seenManager = unitOfWork.getContext()
     })
 
-    expect(seenManager).toBe(queryRunner.manager)
+    expect(seenManager).toBe(mocks.queryRunner.manager)
   })
 
   it("should roll back and rethrow when the callback throws", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const error = new Error("boom")
 
     await expect(
@@ -64,15 +79,16 @@ describe("UnitOfWork", () => {
       })
     ).rejects.toThrow(error)
 
-    expect(queryRunner.rollbackTransaction).toHaveBeenCalledTimes(1)
-    expect(queryRunner.commitTransaction).not.toHaveBeenCalled()
-    expect(queryRunner.release).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.rollbackTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.commitTransaction).not.toHaveBeenCalled()
+    expect(mocks.queryRunner.release).toHaveBeenCalledTimes(1)
   })
 
   it("should release the query runner even if rollback fails", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const rollbackError = new Error("rollback failed")
-    queryRunner.rollbackTransaction.mockRejectedValueOnce(rollbackError)
+    mocks.queryRunner.rollbackTransaction.mockRejectedValueOnce(rollbackError)
 
     await expect(
       unitOfWork.transaction(async () => {
@@ -80,35 +96,38 @@ describe("UnitOfWork", () => {
       })
     ).rejects.toThrow(rollbackError)
 
-    expect(queryRunner.release).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.release).toHaveBeenCalledTimes(1)
   })
 
   it("should not roll back if the transaction never started", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const startError = new Error("start failed")
-    queryRunner.startTransaction.mockRejectedValueOnce(startError)
+    mocks.queryRunner.startTransaction.mockRejectedValueOnce(startError)
 
     await expect(unitOfWork.transaction(async () => "never reached")).rejects.toThrow(startError)
 
-    expect(queryRunner.rollbackTransaction).not.toHaveBeenCalled()
-    expect(queryRunner.release).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.rollbackTransaction).not.toHaveBeenCalled()
+    expect(mocks.queryRunner.release).toHaveBeenCalledTimes(1)
   })
 
   it("should reuse an existing transaction instead of nesting (propagation)", async () => {
-    const { queryRunner, dataSource, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
 
     await unitOfWork.transaction(async () => {
       await unitOfWork.transaction(async () => "inner")
     })
 
-    expect(dataSource.createQueryRunner).toHaveBeenCalledTimes(1)
-    expect(queryRunner.startTransaction).toHaveBeenCalledTimes(1)
-    expect(queryRunner.commitTransaction).toHaveBeenCalledTimes(1)
-    expect(queryRunner.release).toHaveBeenCalledTimes(1)
+    expect(mocks.dataSource.createQueryRunner).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.startTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.commitTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.release).toHaveBeenCalledTimes(1)
   })
 
   it("should clear the context after the transaction finishes", async () => {
-    const { unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
 
     await unitOfWork.transaction(async () => "ok")
 
@@ -116,17 +135,19 @@ describe("UnitOfWork", () => {
   })
 
   it("should pass the isolation level to startTransaction", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
 
     await unitOfWork.transaction(async () => "ok", {
       isolationLevel: "SERIALIZABLE"
     })
 
-    expect(queryRunner.startTransaction).toHaveBeenCalledWith("SERIALIZABLE")
+    expect(mocks.queryRunner.startTransaction).toHaveBeenCalledWith("SERIALIZABLE")
   })
 
   it("should start a new transaction with REQUIRES_NEW even when one is active", async () => {
-    const { dataSource, queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
 
     await unitOfWork.transaction(async () => {
       await unitOfWork.transaction(async () => "inner", {
@@ -134,14 +155,15 @@ describe("UnitOfWork", () => {
       })
     })
 
-    expect(dataSource.createQueryRunner).toHaveBeenCalledTimes(2)
-    expect(queryRunner.startTransaction).toHaveBeenCalledTimes(2)
-    expect(queryRunner.commitTransaction).toHaveBeenCalledTimes(2)
-    expect(queryRunner.release).toHaveBeenCalledTimes(2)
+    expect(mocks.dataSource.createQueryRunner).toHaveBeenCalledTimes(2)
+    expect(mocks.queryRunner.startTransaction).toHaveBeenCalledTimes(2)
+    expect(mocks.queryRunner.commitTransaction).toHaveBeenCalledTimes(2)
+    expect(mocks.queryRunner.release).toHaveBeenCalledTimes(2)
   })
 
   it("should throw for MANDATORY when no transaction is active", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
 
     await expect(
       unitOfWork.transaction(async () => "nope", {
@@ -149,21 +171,23 @@ describe("UnitOfWork", () => {
       })
     ).rejects.toThrow("MANDATORY")
 
-    expect(queryRunner.startTransaction).not.toHaveBeenCalled()
+    expect(mocks.queryRunner.startTransaction).not.toHaveBeenCalled()
   })
 
   it("should run onCommit after a successful commit", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const onCommit = vi.fn()
 
     await unitOfWork.transaction(async () => "ok", { onCommit })
 
     expect(onCommit).toHaveBeenCalledTimes(1)
-    expect(queryRunner.commitTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.commitTransaction).toHaveBeenCalledTimes(1)
   })
 
   it("should run onRollback with the error after a rollback", async () => {
-    const { queryRunner, unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const onRollback = vi.fn()
     const error = new Error("boom")
 
@@ -177,11 +201,12 @@ describe("UnitOfWork", () => {
     ).rejects.toThrow(error)
 
     expect(onRollback).toHaveBeenCalledWith(error)
-    expect(queryRunner.rollbackTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.queryRunner.rollbackTransaction).toHaveBeenCalledTimes(1)
   })
 
   it("should not run onCommit when the callback throws", async () => {
-    const { unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const onCommit = vi.fn()
 
     await expect(
@@ -197,7 +222,8 @@ describe("UnitOfWork", () => {
   })
 
   it("should not call hooks when joining an existing transaction", async () => {
-    const { unitOfWork } = createMocks()
+    const mocks = createMocks()
+    const { unitOfWork } = await createUnitOfWork(mocks)
     const onCommit = vi.fn()
     const onRollback = vi.fn()
 

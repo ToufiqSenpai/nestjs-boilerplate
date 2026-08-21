@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
+import { vi } from "vitest"
+import { mocked } from "vitest-mock-extended"
 import request from "supertest"
 import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
@@ -19,7 +20,6 @@ beforeAll(async () => {
 afterAll(async () => {
   vi.restoreAllMocks()
   if (createdUserIds.length > 0) await dataSource.getRepository(User).delete(createdUserIds)
-  await app.close()
 })
 
 async function createVerifiedSession() {
@@ -123,7 +123,7 @@ describe("POST /api/auth/change-email", () => {
   it("triggers verification email when authenticated", async () => {
     const { cookie } = await createVerifiedSession()
     const newEmail = createCredentials().email
-    vi.mocked(emailService.send).mockClear()
+    mocked(emailService.send).mockClear()
     const res = await request(app.getHttpServer())
       .post("/api/auth/change-email")
       .set("Cookie", cookie)

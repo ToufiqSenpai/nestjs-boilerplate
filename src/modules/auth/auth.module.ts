@@ -3,6 +3,7 @@ import { DataSource } from "typeorm"
 import { betterAuth } from "better-auth"
 import { admin, openAPI } from "better-auth/plugins"
 import { hash, verify, type Options } from "@node-rs/argon2"
+import { v7 as uuidv7 } from "uuid"
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth"
 import { createDatabaseAdapter } from "./database-adapter.js"
 import { EmailService } from "../../email/email.service.js"
@@ -65,8 +66,9 @@ const logger = new Logger("AuthModule")
             }
           },
           advanced: {
+            generateId: () => uuidv7(),
             database: {
-              generateId: "uuid"
+              generateId: () => uuidv7()
             },
             ipAddress: {
               ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],

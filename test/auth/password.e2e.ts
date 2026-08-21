@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
+import { vi } from "vitest"
+import { mocked } from "vitest-mock-extended"
 import request from "supertest"
 import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
@@ -26,7 +27,6 @@ beforeAll(async () => {
 afterAll(async () => {
   vi.restoreAllMocks()
   if (createdUserIds.length > 0) await dataSource.getRepository(User).delete(createdUserIds)
-  await app.close()
 })
 
 async function createVerifiedUserWithSession() {
@@ -42,13 +42,13 @@ async function createVerifiedUserWithSession() {
 describe("POST /api/auth/request-password-reset", () => {
   it("sends reset email for an existing email", async () => {
     const { credentials } = await createVerifiedUserWithSession()
-    vi.mocked(emailService.send).mockClear()
+    mocked(emailService.send).mockClear()
     const res = await request(app.getHttpServer())
       .post("/api/auth/request-password-reset")
       .send({ email: credentials.email, redirectTo: "http://localhost:3000/reset" })
       .expect(200)
     expect(res.body.status).toBe(true)
-    expect(vi.mocked(emailService.send).mock.calls.length).toBeGreaterThan(0)
+    expect(mocked(emailService.send).mock.calls.length).toBeGreaterThan(0)
   })
 
   it("still returns 200 for an unknown email", async () => {
@@ -67,7 +67,7 @@ describe("POST /api/auth/request-password-reset", () => {
 describe("POST /api/auth/reset-password", () => {
   it("rotates password with a valid token and revokes existing sessions", async () => {
     const { credentials, cookie: oldCookie } = await createVerifiedUserWithSession()
-    vi.mocked(emailService.send).mockClear()
+    mocked(emailService.send).mockClear()
     await request(app.getHttpServer())
       .post("/api/auth/request-password-reset")
       .send({ email: credentials.email, redirectTo: "http://localhost:3000/reset" })

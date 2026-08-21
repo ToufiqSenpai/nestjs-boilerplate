@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
+import { vi } from "vitest"
+import { mocked } from "vitest-mock-extended"
 import request from "supertest"
 import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
@@ -20,7 +21,6 @@ beforeAll(async () => {
 afterAll(async () => {
   vi.restoreAllMocks()
   if (createdUserIds.length > 0) await dataSource.getRepository(User).delete(createdUserIds)
-  await app.close()
 })
 
 describe("GET /api/auth/verify-email", () => {
@@ -74,13 +74,13 @@ describe("POST /api/auth/send-verification-email", () => {
     const credentials = createCredentials()
     const signUpRes = await signUp(credentials).expect(200)
     createdUserIds.push(signUpRes.body.user.id)
-    vi.mocked(emailService.send).mockClear()
+    mocked(emailService.send).mockClear()
     const res = await request(app.getHttpServer())
       .post("/api/auth/send-verification-email")
       .send({ email: credentials.email })
       .expect(200)
     expect(res.body.status).toBe(true)
-    const lastCall = vi.mocked(emailService.send).mock.calls.at(-1)
+    const lastCall = mocked(emailService.send).mock.calls.at(-1)
     expect(lastCall?.[0].template).toBe("verification")
   })
 

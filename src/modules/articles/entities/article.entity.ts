@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
 import { BaseEntity } from "../../../database/base.entity.js"
 import { User } from "../../auth/entities/user.entity.js"
+import { ArticleCategory } from "./article-category.entity.js"
 import { ArticleTranslation } from "./article-translation.entity.js"
 
 export enum ArticleStatus {
@@ -20,6 +21,13 @@ export class Article extends BaseEntity {
   @ManyToOne(() => User, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "authorId" })
   public author: User | null
+
+  @Column({ type: "uuid" })
+  public categoryId: string
+
+  @ManyToOne(() => ArticleCategory, { onDelete: "RESTRICT", nullable: false })
+  @JoinColumn({ name: "categoryId" })
+  public category: Promise<ArticleCategory>
 
   @OneToMany(() => ArticleTranslation, translation => translation.article)
   public translations: Promise<ArticleTranslation[]>

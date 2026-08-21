@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events"
 import { PGlite } from "@electric-sql/pglite"
+import { pg_uuidv7 } from "@electric-sql/pglite-pg_uuidv7"
 
 type PGliteConnectCallback = (error: unknown, client: PGlitePool | null, done: () => void) => void
 
@@ -9,7 +10,13 @@ let pgliteInstance: Promise<PGlite> | null = null
 
 function getPGliteInstance(): Promise<PGlite> {
   if (!pgliteInstance) {
-    pgliteInstance = PGlite.create({ dataDir: "memory://" })
+    pgliteInstance = PGlite.create({
+      dataDir: "memory://",
+      extensions: { pg_uuidv7 }
+    }).then(async db => {
+      await db.exec(`CREATE EXTENSION IF NOT EXISTS "pg_uuidv7"`)
+      return db
+    })
   }
   return pgliteInstance
 }

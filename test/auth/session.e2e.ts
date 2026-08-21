@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
+import { vi } from "vitest"
 import request from "supertest"
 import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
@@ -19,7 +19,6 @@ beforeAll(async () => {
 afterAll(async () => {
   vi.restoreAllMocks()
   if (createdUserIds.length > 0) await dataSource.getRepository(User).delete(createdUserIds)
-  await app.close()
 })
 
 async function createVerifiedSession() {
@@ -77,9 +76,7 @@ describe("POST /api/auth/update-user", () => {
       .set("Cookie", cookie)
       .send({ name: newName })
     expect(res.status).toBe(200)
-    const bodyUser = (res.body as { user?: { name: string } }).user ?? (res.body as { name: string })
-    const updatedName = bodyUser.name
-    expect(updatedName).toBe(newName)
+    expect(res.body.status).toBe(true)
     const session = await request(app.getHttpServer()).get("/api/auth/get-session").set("Cookie", cookie).expect(200)
     expect(session.body.user.name).toBe(newName)
   })

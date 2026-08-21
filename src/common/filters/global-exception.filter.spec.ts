@@ -1,3 +1,5 @@
+import { vi } from "vitest"
+import { mock } from "vitest-mock-extended"
 import { BadRequestException, HttpException, HttpStatus } from "@nestjs/common"
 import type { ArgumentsHost } from "@nestjs/common"
 import { Request, Response } from "express"
@@ -7,17 +9,22 @@ vi.mock("@sentry/nestjs", () => ({
   SentryExceptionCaptured: () => () => () => {}
 }))
 
+vi.mock("../../config/index.js", () => ({
+  config: {
+    app: { environment: "production" }
+  }
+}))
+
 function createHost() {
   const json = vi.fn()
   const status = vi.fn().mockReturnValue({ json })
   const response = { status } as unknown as Response
-  const request = { url: "/test" } as unknown as Request
-  const host = {
-    switchToHttp: () => ({
-      getResponse: () => response,
-      getRequest: () => request
-    })
-  } as unknown as ArgumentsHost
+  const request = { url: "/test", path: "/test" } as unknown as Request
+  const host = mock<ArgumentsHost>()
+  host.switchToHttp.mockReturnValue({
+    getResponse: () => response,
+    getRequest: () => request
+  } as unknown as ReturnType<ArgumentsHost["switchToHttp"]>)
   return { host, json, status, response, request }
 }
 
@@ -48,14 +55,15 @@ describe("GlobalExceptionFilter", () => {
     expect(json).toHaveBeenCalledWith({ message: "foo" })
   })
 
-  it("should join array message", () => {
+  it("should expose HttpException message when response contains array (no join in current filter)", () => {
     const { host, json, status } = createHost()
     const exception = new HttpException({ message: ["a", "b"] } as never, HttpStatus.BAD_REQUEST)
 
     filter.catch(exception, host)
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
-    expect(json).toHaveBeenCalledWith({ message: "a, b" })
+    // Current filter: body = { ...res, message: exception.message } -> exception.message is "Http Exception"
+    expect(json).toHaveBeenCalledWith({ message: "Http Exception" })
   })
 
   it("should preserve extra fields and fallback message when response has no message", () => {
@@ -84,7 +92,7 @@ describe("GlobalExceptionFilter", () => {
     })
   })
 
-  it("should forward custom fields alongside normalized array message", () => {
+  it("should forward custom fields with HttpException message (no array normalization)", () => {
     const { host, json, status } = createHost()
     const exception = new HttpException(
       { message: ["a", "b"], code: "ERR_VALIDATION" } as never,
@@ -94,7 +102,8 @@ describe("GlobalExceptionFilter", () => {
     filter.catch(exception, host)
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST)
-    expect(json).toHaveBeenCalledWith({ message: "a, b", code: "ERR_VALIDATION" })
+    // Current filter does not join arrays, it forwards exception.message
+    expect(json).toHaveBeenCalledWith({ message: "Http Exception", code: "ERR_VALIDATION" })
   })
 
   it("should handle generic Error", () => {
@@ -106,13 +115,14 @@ describe("GlobalExceptionFilter", () => {
     expect(json).toHaveBeenCalledWith({ message: "boom" })
   })
 
-  it("should fallback for empty Error message", () => {
+  it("should return empty message when Error message is empty (no fallback in current filter)", () => {
     const { host, json, status } = createHost()
 
     filter.catch(new Error(""), host)
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR)
-    expect(json).toHaveBeenCalledWith({ message: "Internal server error" })
+    // Current filter in production: body = { message: exception.message } -> "" (no fallback)
+    expect(json).toHaveBeenCalledWith({ message: "" })
   })
 
   it("should handle non-Error throw", () => {

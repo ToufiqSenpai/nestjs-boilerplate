@@ -1,3 +1,4 @@
+import { vi } from "vitest"
 import { Request, Response, NextFunction } from "express"
 import { SentryContextMiddleware } from "./sentry-context.middleware.js"
 

@@ -2,6 +2,7 @@ import "reflect-metadata"
 import { UnitOfWork } from "./unit-of-work.js"
 import { Transactional, TRANSACTIONAL_METADATA_KEY } from "./transactional.decorator.js"
 import { vi } from "vitest"
+import { mock } from "vitest-mock-extended"
 
 class Target {}
 
@@ -46,9 +47,9 @@ describe("Transactional decorator", () => {
     } as unknown as PropertyDescriptor
 
     const transactionSpy = vi.fn((callback: () => unknown) => callback())
-    UnitOfWork.instance = {
-      transaction: transactionSpy
-    } as unknown as UnitOfWork
+    const mockUow = mock<UnitOfWork>()
+    mockUow.transaction = transactionSpy as unknown as UnitOfWork["transaction"]
+    UnitOfWork.instance = mockUow
 
     Transactional()(Target.prototype, "method", descriptor)
 
@@ -77,9 +78,9 @@ describe("Transactional decorator", () => {
     } as unknown as PropertyDescriptor
 
     const transactionSpy = vi.fn((callback: () => unknown) => callback())
-    UnitOfWork.instance = {
-      transaction: transactionSpy
-    } as unknown as UnitOfWork
+    const mockUow = mock<UnitOfWork>()
+    mockUow.transaction = transactionSpy as unknown as UnitOfWork["transaction"]
+    UnitOfWork.instance = mockUow
 
     const options = {
       propagation: "MANDATORY" as const,

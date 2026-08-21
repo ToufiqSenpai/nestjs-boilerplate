@@ -5,12 +5,13 @@ import * as Sentry from "@sentry/nestjs"
 @Injectable()
 export class SentryContextMiddleware implements NestMiddleware {
   public use(
-    req: Request & { user?: { id: string; email?: string; role?: string } },
+    req: Request & { user?: { id: string | number; email?: string; role?: string } },
     _res: Response,
     next: NextFunction
   ): void {
     if (req.user) {
-      Sentry.setUser({ id: req.user.id, email: req.user.email })
+      const userId = req.user.id
+      Sentry.setUser({ id: String(userId), email: req.user.email })
       if (req.user.role) {
         Sentry.setTag("user.role", req.user.role)
       }

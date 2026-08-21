@@ -12,10 +12,10 @@ export class Account extends BaseEntity {
   @JoinColumn({ name: "userId" })
   public user: Promise<User>
 
-  @Column({ type: "uuid" })
+  @Column({ type: "text" })
   public accountId: string
 
-  @Column({ type: "uuid" })
+  @Column({ type: "text" })
   public providerId: string
 
   @Column({ type: "text", nullable: true })

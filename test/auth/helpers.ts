@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker"
 import request from "supertest"
 import { vi } from "vitest"
+import { mocked } from "vitest-mock-extended"
 import type { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
 import { User } from "../../src/modules/auth/entities/user.entity.js"
@@ -33,7 +34,7 @@ export function withCookie(req: request.Test, cookie: string): request.Test {
 }
 
 export function extractVerificationUrl(): string | null {
-  const calls = vi.mocked(app.get(EmailService).send).mock.calls
+  const calls = mocked(app.get(EmailService).send).mock.calls
   const match = [...calls].reverse().find(c => (c[0] as { template: string }).template === "verification")
   if (!match) return null
   return (match[0] as { props: { verificationUrl: string } }).props.verificationUrl
@@ -50,7 +51,7 @@ export function extractVerificationToken(): string | null {
 }
 
 export function extractResetUrl(): string | null {
-  const calls = vi.mocked(app.get(EmailService).send).mock.calls
+  const calls = mocked(app.get(EmailService).send).mock.calls
   const match = [...calls].reverse().find(c => (c[0] as { template: string }).template === "reset-password")
   if (!match) return null
   return (match[0] as { props: { resetUrl: string } }).props.resetUrl

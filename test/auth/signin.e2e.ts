@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
+import { vi } from "vitest"
 import request from "supertest"
 import { DataSource } from "typeorm"
 import { app } from "../../src/main.js"
@@ -22,7 +22,6 @@ describe("POST /api/auth/sign-in/email", () => {
     if (createdUserIds.length > 0) {
       await dataSource.getRepository(User).delete(createdUserIds)
     }
-    await app.close()
   })
 
   it("signs in a verified user and returns token, user and set-cookie", async () => {

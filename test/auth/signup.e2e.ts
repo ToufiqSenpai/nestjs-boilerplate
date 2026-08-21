@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
+import { vi } from "vitest"
+import { mocked } from "vitest-mock-extended"
 import { faker } from "@faker-js/faker"
 import request from "supertest"
 import { DataSource } from "typeorm"
@@ -24,7 +25,6 @@ describe("POST /api/auth/sign-up/email", () => {
     if (createdUserIds.length > 0) {
       await dataSource.getRepository(User).delete(createdUserIds)
     }
-    await app.close()
   })
 
   const signUp = (body: Record<string, unknown>) =>
@@ -48,6 +48,7 @@ describe("POST /api/auth/sign-up/email", () => {
       name: credentials.name
     })
     expect(res.body.user.id).toBeDefined()
+    expect(res.body.user.id[14]).toBe("7")
     expect(res.body.user.createdAt).toBeDefined()
     expect(res.body.user.updatedAt).toBeDefined()
     createdUserIds.push(res.body.user.id)
@@ -113,7 +114,7 @@ describe("POST /api/auth/sign-up/email", () => {
     await signUp(credentials).expect(200)
 
     // The verification email was "sent" through the mocked EmailService
-    const sendCall = vi.mocked(emailService.send).mock.calls.at(-1)
+    const sendCall = mocked(emailService.send).mock.calls.at(-1)
     expect(sendCall).toBeDefined()
     expect(sendCall![0].template).toBe("verification")
 

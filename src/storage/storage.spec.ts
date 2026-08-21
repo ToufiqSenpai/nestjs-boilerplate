@@ -1,4 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { vi } from "vitest"
+import { mock, type MockProxy } from "vitest-mock-extended"
+import { Test } from "@nestjs/testing"
 import { Readable } from "stream"
 import { S3Client } from "@aws-sdk/client-s3"
 import { Storage } from "./storage.js"
@@ -18,19 +20,19 @@ vi.mock("@aws-sdk/lib-storage", () => ({
 
 import { Upload } from "@aws-sdk/lib-storage"
 
-function createMocks() {
-  const send = vi.fn()
-  const s3 = { send } as unknown as S3Client
-  return { s3, send }
-}
-
 describe("Storage", () => {
-  let mocks: ReturnType<typeof createMocks>
+  let mockS3: MockProxy<S3Client>
   let storage: Storage
 
-  beforeEach(() => {
-    mocks = createMocks()
-    storage = new Storage(mocks.s3)
+  beforeEach(async () => {
+    mockS3 = mock<S3Client>()
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        Storage,
+        { provide: S3Client, useValue: mockS3 }
+      ]
+    }).compile()
+    storage = moduleRef.get(Storage)
     vi.clearAllMocks()
 
     vi.mocked(Upload).mockImplementation(function (options: unknown) {
@@ -157,7 +159,7 @@ describe("Storage", () => {
   describe("getFileMetadata", () => {
     it("should return metadata from HeadObject only", async () => {
       const lastModified = new Date("2026-01-01T00:00:00Z")
-      mocks.send.mockResolvedValue({
+      mockS3.send.mockResolvedValue({
         ContentLength: 123,
         ContentType: "image/png",
         ContentEncoding: "gzip",
@@ -169,7 +171,7 @@ describe("Storage", () => {
 
       const result = await storage.getFileMetadata(new StorageKey("avatars", "a.png"))
 
-      expect(mocks.send).toHaveBeenCalledTimes(1)
+      expect(mockS3.send).toHaveBeenCalledTimes(1)
       expect(result).toEqual({
         key: "avatars/a.png",
         contentType: "image/png",
@@ -187,7 +189,7 @@ describe("Storage", () => {
   describe("list", () => {
     it("should list all objects across pages", async () => {
       const lastModified = new Date("2026-01-01T00:00:00Z")
-      mocks.send
+      mockS3.send
         .mockResolvedValueOnce({
           Contents: [{ Key: "avatars/a.png", Size: 1 }],
           NextContinuationToken: "token-1"
@@ -211,7 +213,7 @@ describe("Storage", () => {
 
       const result = await storage.list("avatars")
 
-      expect(mocks.send).toHaveBeenCalledTimes(4)
+      expect(mockS3.send).toHaveBeenCalledTimes(4)
       expect(result).toEqual([
         {
           key: "avatars/a.png",
@@ -239,7 +241,7 @@ describe("Storage", () => {
     })
 
     it("should skip objects without a key", async () => {
-      mocks.send.mockResolvedValue({
+      mockS3.send.mockResolvedValue({
         Contents: [{ Size: 1 }],
         NextContinuationToken: undefined
       })
@@ -252,11 +254,11 @@ describe("Storage", () => {
 
   describe("delete", () => {
     it("should delete the object with the sanitized key", async () => {
-      mocks.send.mockResolvedValue({})
+      mockS3.send.mockResolvedValue({})
 
       await storage.delete(new StorageKey("avatars", "../evil.png"))
 
-      const [command] = mocks.send.mock.calls[0] as [{ input: { Key: string } }]
+      const [command] = mockS3.send.mock.calls[0] as [{ input: { Key: string } }]
       expect(command.input.Key).toBe("avatars/..evil.png")
     })
   })
@@ -264,7 +266,7 @@ describe("Storage", () => {
   describe("copy", () => {
     it("should copy an object and return metadata of the destination", async () => {
       const lastModified = new Date("2026-01-01T00:00:00Z")
-      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({
+      mockS3.send.mockResolvedValueOnce({}).mockResolvedValueOnce({
         ContentLength: 123,
         ContentType: "image/png",
         ContentEncoding: "gzip",
@@ -279,8 +281,8 @@ describe("Storage", () => {
         destination: new StorageKey("backups", "a.png")
       })
 
-      expect(mocks.send).toHaveBeenCalledTimes(2)
-      const [copyCommand] = mocks.send.mock.calls[0] as [{ input: { CopySource: string; Key: string } }]
+      expect(mockS3.send).toHaveBeenCalledTimes(2)
+      const [copyCommand] = mockS3.send.mock.calls[0] as [{ input: { CopySource: string; Key: string } }]
       expect(copyCommand.input.CopySource).toBe("test-bucket/avatars/a.png")
       expect(copyCommand.input.Key).toBe("backups/a.png")
       expect(result).toEqual({
@@ -297,7 +299,7 @@ describe("Storage", () => {
     })
 
     it("should apply headers with MetadataDirective REPLACE when provided", async () => {
-      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({
+      mockS3.send.mockResolvedValueOnce({}).mockResolvedValueOnce({
         ContentLength: 10,
         ContentType: "image/webp",
         LastModified: new Date("2026-01-01T00:00:00Z"),
@@ -314,7 +316,7 @@ describe("Storage", () => {
         }
       })
 
-      const [copyCommand] = mocks.send.mock.calls[0] as [
+      const [copyCommand] = mockS3.send.mock.calls[0] as [
         {
           input: {
             MetadataDirective?: string
@@ -333,26 +335,26 @@ describe("Storage", () => {
     })
 
     it("should omit MetadataDirective when no headers provided", async () => {
-      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({ ContentLength: 1 })
+      mockS3.send.mockResolvedValueOnce({}).mockResolvedValueOnce({ ContentLength: 1 })
 
       await storage.copy({
         source: new StorageKey("avatars", "a.png"),
         destination: new StorageKey("backups", "a.png")
       })
 
-      const [copyCommand] = mocks.send.mock.calls[0] as [{ input: { MetadataDirective?: string } }]
+      const [copyCommand] = mockS3.send.mock.calls[0] as [{ input: { MetadataDirective?: string } }]
       expect(copyCommand.input.MetadataDirective).toBeUndefined()
     })
 
     it("should use sanitized keys for source and destination", async () => {
-      mocks.send.mockResolvedValueOnce({}).mockResolvedValueOnce({ ContentLength: 1 })
+      mockS3.send.mockResolvedValueOnce({}).mockResolvedValueOnce({ ContentLength: 1 })
 
       await storage.copy({
         source: new StorageKey("avatars", "../evil.png"),
         destination: new StorageKey("backups", "a/../../etc.png")
       })
 
-      const [copyCommand] = mocks.send.mock.calls[0] as [{ input: { CopySource: string; Key: string } }]
+      const [copyCommand] = mockS3.send.mock.calls[0] as [{ input: { CopySource: string; Key: string } }]
       expect(copyCommand.input.CopySource).toBe("test-bucket/avatars/..evil.png")
       expect(copyCommand.input.Key).toBe("backups/a....etc.png")
     })
@@ -360,11 +362,11 @@ describe("Storage", () => {
 
   describe("key sanitization", () => {
     it("should strip unsafe characters from collection and name", async () => {
-      mocks.send.mockResolvedValue({ ContentLength: 1 })
+      mockS3.send.mockResolvedValue({ ContentLength: 1 })
 
       await storage.getFileMetadata(new StorageKey("../avatars", "a/../../etc.png"))
 
-      const [command] = mocks.send.mock.calls[0] as [{ input: { Key: string } }]
+      const [command] = mockS3.send.mock.calls[0] as [{ input: { Key: string } }]
       expect(command.input.Key).toBe("..avatars/a....etc.png")
     })
   })

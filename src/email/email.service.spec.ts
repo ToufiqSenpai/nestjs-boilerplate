@@ -1,4 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
+import { vi } from "vitest"
+import { mockDeep, type DeepMockProxy } from "vitest-mock-extended"
+import { Test } from "@nestjs/testing"
 import { Resend, type CreateEmailResponse } from "resend"
 import { EmailService } from "./email.service.js"
 import VerificationEmail from "./templates/verification.js"
@@ -6,13 +8,6 @@ import VerificationEmail from "./templates/verification.js"
 vi.mock("@sentry/nestjs", () => ({
   captureException: vi.fn()
 }))
-
-function createMocks() {
-  const send = vi.fn()
-  const resend = { emails: { send } } as unknown as Resend
-
-  return { resend, send }
-}
 
 function success(id = "msg_123"): CreateEmailResponse {
   return {
@@ -33,13 +28,19 @@ function errorResult(statusCode: number, message = "boom"): CreateEmailResponse 
 const DEFAULT_SUBJECT = "Verify your email for Acme"
 
 describe("EmailService", () => {
-  let mocks: ReturnType<typeof createMocks>
+  let mockResend: DeepMockProxy<Resend>
   let service: EmailService
   let defaultParams: Parameters<EmailService["send"]>[0]
 
-  beforeEach(() => {
-    mocks = createMocks()
-    service = new EmailService(mocks.resend)
+  beforeEach(async () => {
+    mockResend = mockDeep<Resend>()
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        EmailService,
+        { provide: Resend, useValue: mockResend }
+      ]
+    }).compile()
+    service = moduleRef.get(EmailService)
     defaultParams = {
       to: "user@example.com",
       template: "verification",
@@ -50,13 +51,13 @@ describe("EmailService", () => {
 
   describe("send", () => {
     it("should send with the correct payload", async () => {
-      mocks.send.mockResolvedValue(success("msg_123"))
+      mockResend.emails.send.mockResolvedValue(success("msg_123"))
 
       await service.send({ ...defaultParams, locale: "en" })
 
-      expect(mocks.send).toHaveBeenCalledTimes(1)
+      expect(mockResend.emails.send).toHaveBeenCalledTimes(1)
 
-      const [payload, options] = mocks.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
+      const [payload, options] = mockResend.emails.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
       expect(payload).toMatchObject({
         from: "Acme <onboarding@resend.dev>",
         replyTo: "support@example.com",
@@ -79,29 +80,29 @@ describe("EmailService", () => {
     })
 
     it("should pass through a custom idempotencyKey", async () => {
-      mocks.send.mockResolvedValue(success())
+      mockResend.emails.send.mockResolvedValue(success())
 
       await service.send({ ...defaultParams, idempotencyKey: "my-key" })
 
-      const [, options] = mocks.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
+      const [, options] = mockResend.emails.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
       expect(options.idempotencyKey).toBe("my-key")
     })
 
     it("should generate a UUID idempotencyKey when not provided", async () => {
-      mocks.send.mockResolvedValue(success())
+      mockResend.emails.send.mockResolvedValue(success())
 
       await service.send(defaultParams)
 
-      const [, options] = mocks.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
+      const [, options] = mockResend.emails.send.mock.calls[0] as [Record<string, unknown>, { idempotencyKey: string }]
       expect(options.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
     })
 
     it("should override the email_type tag with a custom emailType", async () => {
-      mocks.send.mockResolvedValue(success())
+      mockResend.emails.send.mockResolvedValue(success())
 
       await service.send({ ...defaultParams, emailType: "auth" })
 
-      const [payload] = mocks.send.mock.calls[0] as [Record<string, unknown>]
+      const [payload] = mockResend.emails.send.mock.calls[0] as [Record<string, unknown>]
       expect(payload.tags).toEqual([
         { name: "email_type", value: "auth" },
         { name: "user_id", value: "user-42" }
@@ -109,20 +110,20 @@ describe("EmailService", () => {
     })
 
     it("should use a valid locale passed in the params", async () => {
-      mocks.send.mockResolvedValue(success())
+      mockResend.emails.send.mockResolvedValue(success())
 
       await service.send({ ...defaultParams, locale: "en" })
 
-      const [payload] = mocks.send.mock.calls[0] as [Record<string, unknown>]
+      const [payload] = mockResend.emails.send.mock.calls[0] as [Record<string, unknown>]
       expect((payload.react as { props: Record<string, unknown> }).props.locale).toBe("en")
     })
 
     it("should pass through a non-standard locale", async () => {
-      mocks.send.mockResolvedValue(success())
+      mockResend.emails.send.mockResolvedValue(success())
 
       await service.send({ ...defaultParams, locale: "xx" })
 
-      const [payload] = mocks.send.mock.calls[0] as [Record<string, unknown>]
+      const [payload] = mockResend.emails.send.mock.calls[0] as [Record<string, unknown>]
       expect((payload.react as { props: Record<string, unknown> }).props.locale).toBe("xx")
     })
   })
@@ -137,34 +138,34 @@ describe("EmailService", () => {
     })
 
     it("should retry with the same idempotency key", async () => {
-      mocks.send.mockResolvedValueOnce(errorResult(429)).mockResolvedValueOnce(success("msg_retry"))
+      mockResend.emails.send.mockResolvedValueOnce(errorResult(429)).mockResolvedValueOnce(success("msg_retry"))
 
       const promise = service.send(defaultParams)
       await vi.advanceTimersByTimeAsync(10_000)
       await promise
 
-      expect(mocks.send).toHaveBeenCalledTimes(2)
-      const firstKey = mocks.send.mock.calls[0][1].idempotencyKey
-      const secondKey = mocks.send.mock.calls[1][1].idempotencyKey
+      expect(mockResend.emails.send).toHaveBeenCalledTimes(2)
+      const firstKey = mockResend.emails.send.mock.calls[0][1].idempotencyKey
+      const secondKey = mockResend.emails.send.mock.calls[1][1].idempotencyKey
       expect(firstKey).toBe(secondKey)
     })
 
     it("should give up after three attempts on a retryable error", async () => {
-      mocks.send.mockResolvedValue(errorResult(500, "server error"))
+      mockResend.emails.send.mockResolvedValue(errorResult(500, "server error"))
 
       const promise = service.send(defaultParams)
       await vi.advanceTimersByTimeAsync(30_000)
       await promise
 
-      expect(mocks.send).toHaveBeenCalledTimes(3)
+      expect(mockResend.emails.send).toHaveBeenCalledTimes(3)
     })
 
     it("should not retry on a non-retryable error", async () => {
-      mocks.send.mockResolvedValue(errorResult(400, "bad request"))
+      mockResend.emails.send.mockResolvedValue(errorResult(400, "bad request"))
 
       await service.send(defaultParams)
 
-      expect(mocks.send).toHaveBeenCalledTimes(1)
+      expect(mockResend.emails.send).toHaveBeenCalledTimes(1)
     })
   })
 })

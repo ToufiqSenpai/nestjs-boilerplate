@@ -1,7 +1,8 @@
-import { CreateDateColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
+import { CreateDateColumn, Generated, PrimaryColumn, UpdateDateColumn } from "typeorm"
 
 export class BaseEntity {
-  @PrimaryGeneratedColumn("uuid")
+  @Generated("uuid")
+  @PrimaryColumn("uuid", { default: () => "uuid_generate_v7()" })
   public id: string
 
   @CreateDateColumn({ type: "timestamptz" })

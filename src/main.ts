@@ -13,7 +13,8 @@ import { AppModule } from "./app.module.js"
 
 export const app = await NestFactory.create(AppModule, {
   logger,
-  bodyParser: false
+  bodyParser: false,
+  abortOnError: config.app.environment !== "test"
 })
 app.enableShutdownHooks()
 app.setGlobalPrefix("api")
